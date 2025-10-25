@@ -7,7 +7,7 @@ This application demonstrates:
 - Deep learning model deployment
 - Interactive medical image analysis
 - Real-time prediction visualization
-- Educational presentation of results
+
 """
 
 import streamlit as st
@@ -133,14 +133,13 @@ class NeuropathologyApp:
             self.render_detection()
         elif page == 'About Model':
             self.render_about_model()
-        elif page == 'Theory':
-            self.render_theory()
+        # 'Theory' page removed from navigation/UI
     
     def render_sidebar(self):
         """Render the sidebar navigation."""
         st.sidebar.title("Navigation")
         
-        pages = ['Home', 'Detection', 'About Model', 'Theory']
+        pages = ['Home', 'Detection', 'About Model']
         st.session_state.page = st.sidebar.radio("Go to", pages)
         
         st.sidebar.markdown("---")
@@ -189,7 +188,6 @@ class NeuropathologyApp:
                 <li><strong>Transfer Learning</strong>: Using pre-trained models (EfficientNet, ResNet)</li>
                 <li><strong>Fine-tuning</strong>: Adapting general features to medical imaging</li>
                 <li><strong>Modern UI</strong>: Interactive Streamlit interface for instant diagnosis</li>
-                <li><strong>Educational Focus</strong>: Comprehensive theoretical documentation</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -198,7 +196,7 @@ class NeuropathologyApp:
             <div class="warning-box">
             <h3>⚠️ Important Notice</h3>
             <p>
-            This system is designed for <strong>educational and research purposes</strong>. 
+            This system is designed for <strong>research and demonstration purposes only</strong>.
             It should not be used as the sole basis for medical diagnosis. Always consult 
             qualified healthcare professionals for medical decisions.
             </p>
@@ -206,28 +204,30 @@ class NeuropathologyApp:
             """, unsafe_allow_html=True)
             
             st.markdown("""
-            ### 🚀 Key Features
-            
-            1. **Deep Learning Architecture**
-               - Convolutional Neural Networks (CNNs) for image feature extraction
-               - Transfer learning from ImageNet pre-trained models
-               - Fine-tuned specifically for brain MRI analysis
-            
-            2. **Multiple Pathology Detection**
-               - Glioma: Glial cell tumors
-               - Meningioma: Meningeal tumors
-               - Pituitary Tumors: Pituitary gland abnormalities
-               - Normal brain classification
-            
-            3. **Interactive Analysis**
-               - Real-time prediction with confidence scores
-               - Visual explanation of results
-               - Detailed pathology descriptions
-            
-            4. **Comprehensive Documentation**
-               - Theoretical foundations of deep learning
-               - Mathematical explanations
-               - Code-theory correlations
+                ### 🚀 Key Features
+
+                1. **Production-Ready DL Pipeline**
+                    - Transfer learning from ImageNet pre-trained models
+                    - Two-stage training: feature extraction + fine-tuning
+                    - Robust callbacks: checkpointing, early stopping, LR scheduling
+
+                2. **Multiple Pathology Detection**
+                    - Glioma: Glial cell tumors
+                    - Meningioma: Meningeal tumors
+                    - Pituitary Tumors: Pituitary gland abnormalities
+                    - Normal brain classification
+
+                3. **Interactive Analysis**
+                    - Real-time prediction with confidence scores
+                    - Detailed pathology descriptions and confidence bars
+                    - Interactive Plotly visualizations
+
+                4. **Model Implementation Details**
+                    - Base: EfficientNetB0 (include_top=False)
+                    - Head: GAP → BatchNorm → Dense(512, ReLU) → Dropout(0.5)
+                      → Dense(256, ReLU) → BatchNorm → Dropout(0.3) → Dense(4, Softmax)
+                    - Optimizer: Adam (stage 1: 1e-3, fine-tune: 1e-4)
+                    - Metrics: Accuracy, Precision, Recall, AUC
             """)
         
         with col2:
@@ -250,18 +250,7 @@ class NeuropathologyApp:
             
             st.markdown("---")
             
-            st.markdown("""
-            ### 🎓 Learning Path
-            
-            This project covers:
-            
-            - **Neural Networks**: Fundamentals
-            - **CNNs**: Convolutions, pooling
-            - **Transfer Learning**: Pre-trained models
-            - **Optimization**: Gradient descent, Adam
-            - **Regularization**: Dropout, batch norm
-            - **Evaluation**: Metrics, confusion matrix
-            """)
+            # Removed learning path/educational content per repository policy
     
     def render_detection(self):
         """Render the detection page."""
@@ -574,569 +563,7 @@ class NeuropathologyApp:
         - Horizontal flip: 50% probability
         """)
     
-    def render_theory(self):
-        """Render the theory page."""
-        st.markdown("## 📚 Deep Learning Theory")
-        
-        st.markdown("""
-        <div class="info-box">
-        <h3>Understanding the Mathematics Behind the Model</h3>
-        <p>
-        This section explains the theoretical foundations of deep learning used in this project.
-        Each concept is explained from first principles with mathematical formulations.
-        </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Tabs for different topics
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "Neural Networks", "CNNs", "Transfer Learning", 
-            "Optimization", "Evaluation"
-        ])
-        
-        with tab1:
-            self.render_neural_networks_theory()
-        
-        with tab2:
-            self.render_cnn_theory()
-        
-        with tab3:
-            self.render_transfer_learning_theory()
-        
-        with tab4:
-            self.render_optimization_theory()
-        
-        with tab5:
-            self.render_evaluation_theory()
-    
-    def render_neural_networks_theory(self):
-        """Render neural networks theory."""
-        st.markdown("""
-        ### 🧠 Neural Networks: The Foundation
-        
-        #### The Artificial Neuron
-        
-        A single neuron performs a simple computation:
-        
-        **Input:** x = [x₁, x₂, ..., xₙ]  
-        **Weights:** w = [w₁, w₂, ..., wₙ]  
-        **Bias:** b  
-        
-        **Computation:**
-        ```
-        z = w₁x₁ + w₂x₂ + ... + wₙxₙ + b = Σᵢ wᵢxᵢ + b
-        output = activation(z)
-        ```
-        
-        #### Why Neural Networks?
-        
-        **Universal Approximation Theorem:**  
-        A neural network with one hidden layer and sufficient neurons can approximate 
-        any continuous function to arbitrary accuracy.
-        
-        #### Activation Functions
-        
-        **1. ReLU (Rectified Linear Unit)**
-        ```
-        f(z) = max(0, z)
-        ```
-        - Most popular in modern deep learning
-        - Solves vanishing gradient problem
-        - Computationally efficient
-        
-        **2. Sigmoid**
-        ```
-        f(z) = 1 / (1 + e⁻ᶻ)
-        ```
-        - Output range: (0, 1)
-        - Good for binary classification
-        - Suffers from vanishing gradients
-        
-        **3. Softmax (for output layer)**
-        ```
-        f(zᵢ) = e^zᵢ / Σⱼ e^zⱼ
-        ```
-        - Converts scores to probabilities
-        - Outputs sum to 1
-        - Used for multi-class classification
-        
-        #### Multi-Layer Networks
-        
-        **Forward Propagation:**
-        ```
-        Layer 1: a⁽¹⁾ = f(W⁽¹⁾x + b⁽¹⁾)
-        Layer 2: a⁽²⁾ = f(W⁽²⁾a⁽¹⁾ + b⁽²⁾)
-        ...
-        Output: ŷ = f(W⁽ᴸ⁾a⁽ᴸ⁻¹⁾ + b⁽ᴸ⁾)
-        ```
-        
-        Each layer transforms the input, allowing the network to learn 
-        increasingly complex features.
-        """)
-    
-    def render_cnn_theory(self):
-        """Render CNN theory."""
-        st.markdown("""
-        ### 🖼️ Convolutional Neural Networks
-        
-        #### Why CNNs for Images?
-        
-        Traditional neural networks don't exploit spatial structure of images:
-        - Too many parameters (224×224×3 = 150K inputs!)
-        - Lose spatial relationships
-        - Not translation invariant
-        
-        CNNs solve these problems through:
-        1. **Local connectivity**: Each neuron sees only part of image
-        2. **Parameter sharing**: Same filter applied everywhere
-        3. **Hierarchical learning**: Build up from simple to complex features
-        
-        #### Convolutional Layer
-        
-        **Convolution Operation:**
-        ```
-        (I * K)(i,j) = ΣₘΣₙ I(i+m, j+n) × K(m,n)
-        ```
-        
-        Where:
-        - I: Input image
-        - K: Kernel (filter)
-        - (i,j): Position in output
-        
-        **Example: Edge Detection**
-        ```
-        Horizontal edge filter:
-        [-1  -1  -1]
-        [ 0   0   0]
-        [ 1   1   1]
-        ```
-        
-        **Key Parameters:**
-        - **Filter size**: Usually 3×3 or 5×5
-        - **Stride**: How much to move filter (usually 1)
-        - **Padding**: Add zeros around border (keep size)
-        - **Number of filters**: How many features to detect
-        
-        #### Pooling Layer
-        
-        **Purpose:**
-        - Reduce spatial dimensions
-        - Make features position-invariant
-        - Reduce computation
-        
-        **Max Pooling (2×2):**
-        ```
-        Input:        Output:
-        [1  2  3  4]    [6  8]
-        [5  6  7  8]    [14 16]
-        [9  10 11 12]
-        [13 14 15 16]
-        ```
-        Takes maximum in each 2×2 region.
-        
-        #### Feature Hierarchy
-        
-        **Layer 1 (Early):** Edges, colors, textures  
-        **Layer 2:** Corners, contours  
-        **Layer 3:** Parts of objects  
-        **Layer 4:** Object parts  
-        **Layer 5 (Deep):** Whole objects, complex patterns
-        
-        This hierarchical learning mirrors human visual system!
-        """)
-    
-    def render_transfer_learning_theory(self):
-        """Render transfer learning theory."""
-        st.markdown("""
-        ### 🔄 Transfer Learning
-        
-        #### The Core Idea
-        
-        **Problem:** Training from scratch requires:
-        - Huge datasets (millions of images)
-        - Massive compute (weeks on GPUs)
-        - Lots of expertise
-        
-        **Solution:** Use pre-trained models!
-        
-        Models trained on ImageNet learn general visual features that transfer 
-        to other tasks, including medical imaging.
-        
-        #### Why It Works
-        
-        **Feature Universality:**
-        - Early layers detect edges, textures, colors
-        - These features are useful across many vision tasks
-        - Medical images also have edges, textures, shapes
-        
-        **Mathematical Insight:**
-        
-        Let f(x; θ) be a neural network with parameters θ:
-        - θ_source: Parameters from source task (ImageNet)
-        - θ_target: Parameters for target task (brain MRI)
-        
-        Instead of random initialization:
-        ```
-        θ_target ~ N(0, σ²)  ❌ Random, needs lots of data
-        ```
-        
-        We initialize with pre-trained weights:
-        ```
-        θ_target ← θ_source   ✅ Good starting point!
-        ```
-        
-        Then fine-tune on medical data.
-        
-        #### Transfer Learning Strategies
-        
-        **1. Feature Extraction (Frozen Base)**
-        ```
-        Base Model [FROZEN] → New Classifier [TRAINABLE]
-        ```
-        - Keep all pre-trained weights fixed
-        - Only train new classification layers
-        - Fast, needs less data
-        - Good when dataset is small
-        
-        **2. Fine-Tuning (Partial Unfreezing)**
-        ```
-        Early Layers [FROZEN] → Late Layers [TRAINABLE] → Classifier [TRAINABLE]
-        ```
-        - Freeze early layers (general features)
-        - Train later layers + classifier
-        - Adapts features to new domain
-        - Best results typically
-        
-        **3. Full Fine-Tuning (All Layers)**
-        ```
-        All Layers [TRAINABLE]
-        ```
-        - Train entire network
-        - Needs large dataset
-        - Risk of overfitting
-        
-        #### Our Implementation
-        
-        **Stage 1: Feature Extraction**
-        - Freeze EfficientNet base
-        - Train classification head
-        - Learning rate: 0.001
-        - Duration: 20-30 epochs
-        
-        **Stage 2: Fine-Tuning**
-        - Unfreeze last 20 layers
-        - Fine-tune with medical data
-        - Learning rate: 0.0001 (lower!)
-        - Duration: 10-20 epochs
-        
-        **Why Two Stages?**
-        1. New layers need to learn first
-        2. Prevents destroying pre-trained features
-        3. Lower LR in stage 2 makes gentle adjustments
-        """)
-    
-    def render_optimization_theory(self):
-        """Render optimization theory."""
-        st.markdown("""
-        ### ⚙️ Optimization: Learning the Weights
-        
-        #### The Learning Problem
-        
-        **Goal:** Find weights W that minimize loss function L(W)
-        
-        ```
-        W* = argmin_W L(W)
-        ```
-        
-        Where loss measures prediction error on training data.
-        
-        #### Gradient Descent
-        
-        **Core Algorithm:**
-        ```
-        Repeat:
-            1. Compute gradient: g = ∂L/∂W
-            2. Update weights: W ← W - η·g
-        Until convergence
-        ```
-        
-        Where η is the learning rate (step size).
-        
-        **Intuition:**
-        - Gradient points uphill (direction of steepest increase)
-        - Negative gradient points downhill (decrease loss)
-        - Take small steps in that direction
-        
-        **Variants:**
-        
-        **1. Batch Gradient Descent**
-        - Use all training data for each update
-        - Accurate but slow
-        
-        **2. Stochastic Gradient Descent (SGD)**
-        - Use one sample for each update
-        - Fast but noisy
-        
-        **3. Mini-Batch Gradient Descent**
-        - Use small batch (32-256 samples)
-        - Balance speed and accuracy
-        - Most commonly used
-        
-        #### Adam Optimizer
-        
-        **Adaptive Moment Estimation** - the most popular optimizer!
-        
-        **Key Ideas:**
-        1. **Momentum**: Remember past gradients
-        2. **Adaptive learning rates**: Different rate for each parameter
-        
-        **Algorithm:**
-        ```
-        Initialize:
-            m ← 0  (first moment)
-            v ← 0  (second moment)
-            t ← 0  (timestep)
-        
-        Repeat:
-            t ← t + 1
-            g ← ∂L/∂W  (gradient)
-            
-            # Update moments
-            m ← β₁·m + (1-β₁)·g        (momentum)
-            v ← β₂·v + (1-β₂)·g²       (adaptive LR)
-            
-            # Bias correction
-            m̂ ← m / (1 - β₁ᵗ)
-            v̂ ← v / (1 - β₂ᵗ)
-            
-            # Update weights
-            W ← W - η · m̂ / (√v̂ + ε)
-        ```
-        
-        **Hyperparameters:**
-        - η = 0.001 (learning rate)
-        - β₁ = 0.9 (momentum decay)
-        - β₂ = 0.999 (adaptive LR decay)
-        - ε = 10⁻⁸ (numerical stability)
-        
-        **Why Adam Works Well:**
-        - Adapts learning rate per parameter
-        - Handles sparse gradients
-        - Momentum helps escape local minima
-        - Works well with little tuning
-        
-        #### Backpropagation
-        
-        **The Chain Rule:**
-        
-        For composite function y = f(g(x)):
-        ```
-        dy/dx = (dy/dg) · (dg/dx)
-        ```
-        
-        **In Neural Networks:**
-        
-        For L = loss(output(hidden(input))):
-        ```
-        ∂L/∂W₁ = (∂L/∂output) · (∂output/∂hidden) · (∂hidden/∂W₁)
-        ```
-        
-        **Algorithm:**
-        1. Forward pass: Compute outputs, save intermediate values
-        2. Backward pass: Compute gradients from output to input
-        3. Update: Use gradients to update all weights
-        
-        This enables efficient gradient computation in deep networks!
-        
-        #### Learning Rate Scheduling
-        
-        **Why?** Fixed learning rate may not be optimal:
-        - Start: Large LR for fast progress
-        - End: Small LR for fine-tuning
-        
-        **Strategies:**
-        
-        **1. Step Decay**
-        ```
-        η = η₀ · γ^(epoch/k)
-        ```
-        Reduce by factor γ every k epochs.
-        
-        **2. Exponential Decay**
-        ```
-        η = η₀ · e^(-λt)
-        ```
-        Smooth exponential decrease.
-        
-        **3. Reduce on Plateau**
-        ```
-        If val_loss doesn't improve for N epochs:
-            η ← η · factor
-        ```
-        Adaptive based on validation performance.
-        
-        We use **Reduce on Plateau** in this project!
-        """)
-    
-    def render_evaluation_theory(self):
-        """Render evaluation theory."""
-        st.markdown("""
-        ### 📊 Model Evaluation
-        
-        #### Why Multiple Metrics?
-        
-        Accuracy alone can be misleading, especially with imbalanced data!
-        
-        **Example:**  
-        Dataset: 95% Normal, 5% Tumor  
-        Dummy classifier: Always predict "Normal"  
-        Accuracy: 95% (but useless!)
-        
-        Need metrics that capture different aspects of performance.
-        
-        #### Classification Metrics
-        
-        **Confusion Matrix:**
-        ```
-                    Predicted
-                    Pos    Neg
-        Actual Pos   TP     FN
-               Neg   FP     TN
-        ```
-        
-        - **TP (True Positive)**: Correctly predicted positive
-        - **TN (True Negative)**: Correctly predicted negative
-        - **FP (False Positive)**: Incorrectly predicted positive (Type I error)
-        - **FN (False Negative)**: Incorrectly predicted negative (Type II error)
-        
-        **Accuracy:**
-        ```
-        Accuracy = (TP + TN) / (TP + TN + FP + FN)
-        ```
-        Proportion of correct predictions.
-        
-        **Precision:**
-        ```
-        Precision = TP / (TP + FP)
-        ```
-        Of all positive predictions, how many are correct?  
-        **Medical context:** How reliable are positive diagnoses?
-        
-        **Recall (Sensitivity):**
-        ```
-        Recall = TP / (TP + FN)
-        ```
-        Of all actual positives, how many did we find?  
-        **Medical context:** Are we missing tumors?
-        
-        **F1-Score:**
-        ```
-        F1 = 2 · (Precision · Recall) / (Precision + Recall)
-        ```
-        Harmonic mean of precision and recall.  
-        Balances both metrics.
-        
-        **Specificity:**
-        ```
-        Specificity = TN / (TN + FP)
-        ```
-        Of all actual negatives, how many did we correctly identify?  
-        **Medical context:** Are we over-diagnosing?
-        
-        #### Multi-Class Metrics
-        
-        For K classes, compute metrics for each class:
-        
-        **Macro-Average:**
-        ```
-        Metric_macro = (1/K) Σᵢ Metric_i
-        ```
-        Simple average across classes.  
-        Treats all classes equally.
-        
-        **Weighted-Average:**
-        ```
-        Metric_weighted = Σᵢ (nᵢ/N) · Metric_i
-        ```
-        Weighted by class frequency.  
-        Accounts for class imbalance.
-        
-        #### ROC Curve and AUC
-        
-        **ROC (Receiver Operating Characteristic):**
-        - Plot: True Positive Rate vs False Positive Rate
-        - At different classification thresholds
-        
-        ```
-        TPR = Recall = TP/(TP+FN)
-        FPR = FP/(FP+TN)
-        ```
-        
-        **AUC (Area Under Curve):**
-        - Single number summarizing ROC
-        - Range: [0, 1]
-        - AUC = 1.0: Perfect classifier
-        - AUC = 0.5: Random guessing
-        - AUC < 0.5: Worse than random!
-        
-        **Interpretation:**
-        AUC = Probability that model ranks a random positive example 
-        higher than a random negative example.
-        
-        #### Cross-Validation
-        
-        **Problem:** Single train/test split may be lucky/unlucky
-        
-        **Solution:** K-Fold Cross-Validation
-        
-        ```
-        1. Split data into K folds
-        2. For each fold i:
-            - Train on K-1 folds
-            - Test on fold i
-            - Record performance
-        3. Average results across K folds
-        ```
-        
-        **Benefits:**
-        - More reliable performance estimate
-        - Uses all data for training and testing
-        - Reduces variance in results
-        
-        **Common:** K = 5 or K = 10
-        
-        #### Medical Context
-        
-        **In Medical Diagnosis:**
-        
-        **High Recall Preferred:**
-        - Missing a tumor (FN) is dangerous
-        - False alarms (FP) can be rechecked
-        - Better to be cautious
-        
-        **Trade-offs:**
-        ```
-        High Sensitivity (Recall): Catch all diseases (more FP)
-        High Specificity: Avoid false alarms (more FN)
-        ```
-        
-        Adjust threshold based on cost of errors!
-        
-        #### Calibration
-        
-        **Probability Calibration:**  
-        Does predicted probability match true probability?
-        
-        If model says 70% confidence:
-        - Well-calibrated: ~70% of such predictions are correct
-        - Over-confident: <70% correct
-        - Under-confident: >70% correct
-        
-        **Why Important in Medical AI:**
-        - Doctors need reliable confidence scores
-        - Helps with treatment decisions
-        - Determines when to seek second opinion
-        """)
+    # Theory rendering methods removed per request to keep repository focused
 
 
 def main():

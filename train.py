@@ -102,17 +102,23 @@ def create_data_generators(image_paths, labels, batch_size=32,
     Returns:
         Tuple of (train_gen, val_gen, test_gen)
     """
+    # Prepare class indices for stratification (handles one-hot labels)
+    if isinstance(labels, np.ndarray) and labels.ndim == 2:
+        labels_cls = np.argmax(labels, axis=1)
+    else:
+        labels_cls = labels
+
     # Split data
     # First split: separate test set
-    train_val_paths, test_paths, train_val_labels, test_labels = train_test_split(
-        image_paths, labels, test_size=test_split, random_state=42, stratify=labels
+    train_val_paths, test_paths, train_val_labels, test_labels, train_val_cls, test_cls = train_test_split(
+        image_paths, labels, labels_cls, test_size=test_split, random_state=42, stratify=labels_cls
     )
     
     # Second split: separate validation set
     val_size = validation_split / (1 - test_split)
-    train_paths, val_paths, train_labels, val_labels = train_test_split(
-        train_val_paths, train_val_labels, test_size=val_size, 
-        random_state=42, stratify=train_val_labels
+    train_paths, val_paths, train_labels, val_labels, train_cls, val_cls = train_test_split(
+        train_val_paths, train_val_labels, train_val_cls, test_size=val_size, 
+        random_state=42, stratify=train_val_cls
     )
     
     print(f"\nData split:")
