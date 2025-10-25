@@ -15,7 +15,7 @@ seaborn>=0.13.0
 plotly>=5.18.0
 
 # Image Processing
-opencv-python>=4.8.0
+opencv-python>=4.8.1.78
 
 # Model Utilities
 h5py>=3.10.0
