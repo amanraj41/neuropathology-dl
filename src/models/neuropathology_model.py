@@ -302,29 +302,50 @@ class NeuropathologyModel:
         - include_top=False removes final classification layer
         - We add our own classification head for our specific task
         """
+        # Defensive guard: ImageNet weights require 3-channel inputs.
+        # If a 1-channel shape was passed inadvertently, adjust to 3 channels
+        # and keep using ImageNet weights. Our data loader already converts to RGB.
+        in_h, in_w, in_c = self.input_shape
+        # Always use 3-channel input for pretrained CNNs; our loader outputs RGB
+        if in_c != 3:
+            print(f"[Warning] Adjusting input channels from {in_c} to 3 for compatibility with ImageNet weights.")
+        input_shape_arg = (in_h, in_w, 3)
+        self.input_shape = input_shape_arg
+        weights_arg = 'imagenet'
+        input_tensor = layers.Input(shape=input_shape_arg)
+
         if self.base_model_name == 'resnet':
             base_model = ResNet50(
                 include_top=False,
-                weights='imagenet',
-                input_shape=self.input_shape
+                weights=weights_arg,
+                input_tensor=input_tensor
             )
         elif self.base_model_name == 'vgg':
             base_model = VGG16(
                 include_top=False,
-                weights='imagenet',
-                input_shape=self.input_shape
+                weights=weights_arg,
+                input_tensor=input_tensor
             )
         elif self.base_model_name == 'efficientnet':
-            base_model = EfficientNetB0(
-                include_top=False,
-                weights='imagenet',
-                input_shape=self.input_shape
-            )
+            try:
+                base_model = EfficientNetB0(
+                    include_top=False,
+                    weights=weights_arg,
+                    input_tensor=input_tensor
+                )
+            except Exception as e:
+                # Fallback for environments where EfficientNet ImageNet weights fail
+                print(f"[Warning] EfficientNetB0 weights failed to load ({e}). Falling back to MobileNetV2 pretrained base.")
+                base_model = MobileNetV2(
+                    include_top=False,
+                    weights=weights_arg,
+                    input_tensor=input_tensor
+                )
         elif self.base_model_name == 'mobilenet':
             base_model = MobileNetV2(
                 include_top=False,
-                weights='imagenet',
-                input_shape=self.input_shape
+                weights=weights_arg,
+                input_tensor=input_tensor
             )
         else:
             raise ValueError(f"Unknown base model: {self.base_model_name}")
@@ -410,8 +431,17 @@ class NeuropathologyModel:
         if self.model is None:
             raise ValueError("Model not built. Call build_model() first.")
         
+        # Find the base model layer (first layer after input)
+        base_model = None
+        for layer in self.model.layers:
+            if isinstance(layer, keras.Model):
+                base_model = layer
+                break
+        
+        if base_model is None:
+            raise ValueError("Could not find base model in architecture")
+        
         # Unfreeze the base model
-        base_model = self.model.layers[1]  # Assuming base model is second layer
         base_model.trainable = True
         
         # Freeze early layers, only train later layers
@@ -460,6 +490,10 @@ class NeuropathologyModel:
         """
         if self.model is None:
             raise ValueError("Model not built. Nothing to save.")
+        
+        # Use native Keras format (.keras) instead of legacy HDF5 (.h5)
+        if filepath.endswith('.h5'):
+            filepath = filepath.replace('.h5', '.keras')
         
         self.model.save(filepath)
         print(f"Model saved to {filepath}")

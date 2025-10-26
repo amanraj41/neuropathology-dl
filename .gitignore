@@ -14,6 +14,7 @@ lib/
 lib64/
 parts/
 sdist/
+demo.py
 var/
 wheels/
 *.egg-info/
@@ -35,6 +36,7 @@ env/
 # Data
 data/
 datasets/
+!data/.gitkeep
 *.nii
 *.nii.gz
 *.h5
@@ -47,6 +49,14 @@ models/*.pb
 # Logs
 logs/
 *.log
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.bz2
+*.DS_Store
+Thumbs.db
 
 # Jupyter Notebooks
 .ipynb_checkpoints

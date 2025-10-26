@@ -298,30 +298,156 @@ def get_class_descriptions() -> Dict[str, str]:
         Dictionary mapping class names to descriptions
     """
     return {
-        'Glioma': '''
-        Gliomas are brain tumors that originate from glial cells, which support and protect neurons.
-        They are the most common type of brain tumor and can be benign or malignant.
-        Symptoms include headaches, seizures, and neurological deficits.
-        Treatment may involve surgery, radiation, and chemotherapy.
+        # Glioma variants (T1, T1C+, T2)
+        'Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1': '''
+        <b>Gliomas</b> are primary brain tumors arising from glial cells. This category includes astrocytomas, gangliogliomas, glioblastomas, oligodendrogliomas, and ependymomas.
+        <br><b>Symptoms:</b> Headaches, seizures, cognitive decline, focal neurological deficits, nausea/vomiting.
+        <br><b>Causes:</b> Genetic mutations, prior radiation exposure, rare hereditary syndromes (e.g., neurofibromatosis, Li-Fraumeni).
+        <br><b>Severity:</b> Ranges from low-grade (slow-growing) to high-grade (glioblastoma multiforme; aggressive, poor prognosis).
+        <br><b>Treatment:</b> Surgery, radiation, chemotherapy (temozolomide), targeted therapy.
+        ''',
+        'Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+': '''
+        <b>Gliomas (T1 post-contrast)</b>: Contrast enhancement helps differentiate high-grade from low-grade gliomas; high-grade lesions show ring or heterogeneous enhancement.
+        <br><b>Symptoms:</b> Similar to T1—seizures, headaches, progressive neurological deficits.
+        <br><b>Diagnostic Value:</b> T1C+ imaging reveals blood-brain barrier breakdown, necrosis (glioblastoma hallmark), and vascular proliferation.
+        <br><b>Severity:</b> Enhancement pattern correlates with grade; ring enhancement often indicates glioblastoma (WHO Grade IV).
+        ''',
+        'Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2': '''
+        <b>Gliomas (T2-weighted)</b>: T2 highlights edema and tumor extent. Low-grade gliomas appear hyperintense without enhancement; high-grade show heterogeneous signal.
+        <br><b>Symptoms:</b> Headaches, seizures, focal weakness, speech/vision disturbances.
+        <br><b>Diagnostic Value:</b> Best for detecting tumor infiltration and surrounding vasogenic edema.
+        <br><b>Severity:</b> Extensive T2 hyperintensity suggests infiltrative growth; poor demarcation indicates aggressive behavior.
         ''',
         
-        'Meningioma': '''
-        Meningiomas are tumors that arise from the meninges, the membranes surrounding the brain and spinal cord.
-        Most are benign and slow-growing. They are more common in women.
-        Symptoms depend on location but may include headaches, vision problems, and seizures.
-        Treatment typically involves surgical removal if symptomatic.
+        # Meningioma variants (T1, T1C+, T2)
+        'Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1': '''
+        <b>Meningiomas</b> are typically benign, extra-axial tumors arising from arachnoid cap cells. Grading: low-grade (WHO I), atypical (WHO II), anaplastic (WHO III), and transitional subtypes.
+        <br><b>Symptoms:</b> Headaches, seizures, cranial nerve deficits, visual changes, personality changes (if frontal lobe compression).
+        <br><b>Causes:</b> Prior radiation, neurofibromatosis type 2 (NF2), hormonal factors (more common in women).
+        <br><b>Severity:</b> Most are benign; atypical/anaplastic subtypes have higher recurrence and invasion risk.
+        <br><b>Treatment:</b> Surgical resection; radiation for incomplete resection or high-grade.
+        ''',
+        'Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1C+': '''
+        <b>Meningiomas (T1 post-contrast)</b>: Classically show intense, homogeneous enhancement with "dural tail" sign.
+        <br><b>Symptoms:</b> Similar to T1—compression symptoms, seizures, headaches.
+        <br><b>Diagnostic Value:</b> Enhancement pattern confirms extra-axial location and vascularity; helps distinguish from other lesions.
+        <br><b>Severity:</b> Homogeneous enhancement typical of benign; heterogeneous or brain invasion suggests atypical/anaplastic grades.
+        ''',
+        'Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T2': '''
+        <b>Meningiomas (T2-weighted)</b>: Variable signal (iso- to hyperintense). Shows adjacent brain edema in larger lesions.
+        <br><b>Symptoms:</b> Mass effect, seizures, focal deficits depending on location.
+        <br><b>Diagnostic Value:</b> T2 reveals peritumoral edema and helps assess brain parenchyma involvement.
+        <br><b>Severity:</b> Extensive edema may indicate aggressive behavior or venous compromise.
         ''',
         
-        'Pituitary Tumor': '''
-        Pituitary tumors develop in the pituitary gland at the base of the brain.
-        Most are benign adenomas. They can affect hormone production.
-        Symptoms include vision changes, headaches, and hormonal imbalances.
-        Treatment options include medication, surgery, and radiation therapy.
+        # Normal brain (T1, T2)
+        'NORMAL T1': '''
+        <b>Normal Brain (T1-weighted)</b>: No mass lesions, hemorrhage, or abnormal enhancement detected. Gray-white matter differentiation preserved.
+        <br><b>Clinical Significance:</b> Reassuring imaging; patient symptoms may be non-structural (e.g., migraine, functional disorders).
+        <br><b>Follow-up:</b> Clinical correlation recommended; repeat imaging if symptoms progress.
+        ''',
+        'NORMAL T2': '''
+        <b>Normal Brain (T2-weighted)</b>: No abnormal hyperintensity, mass effect, or edema. Ventricles and sulci within normal limits.
+        <br><b>Clinical Significance:</b> Normal structural anatomy; excludes common pathologies (tumors, infarcts, demyelination).
+        <br><b>Follow-up:</b> Symptoms warrant clinical evaluation; imaging may be repeated if indicated.
         ''',
         
-        'Normal': '''
-        No pathological findings detected in the MRI scan.
-        Brain structures appear normal with no signs of tumors or abnormalities.
-        Regular monitoring may still be recommended based on symptoms.
+        # Neurocytoma variants (T1, T1C+, T2)
+        'Neurocitoma (Central - Intraventricular, Extraventricular) T1': '''
+        <b>Neurocytomas</b> are rare, typically benign intraventricular tumors (central neurocytoma) or less commonly extraventricular. Arise from neuronal cells.
+        <br><b>Symptoms:</b> Headaches, hydrocephalus (CSF obstruction), seizures, visual disturbances.
+        <br><b>Causes:</b> Unknown; sporadic occurrence.
+        <br><b>Severity:</b> Benign (WHO Grade II); rare recurrence after gross total resection.
+        <br><b>Treatment:</b> Surgical resection; radiation for subtotal resection or recurrence.
+        ''',
+        'Neurocitoma (Central - Intraventricular, Extraventricular) T1C+': '''
+        <b>Neurocytomas (T1 post-contrast)</b>: Variable enhancement (mild to moderate); often heterogeneous with cystic components.
+        <br><b>Symptoms:</b> Obstructive hydrocephalus, headaches, nausea/vomiting.
+        <br><b>Diagnostic Value:</b> Enhancement pattern and intraventricular location aid diagnosis; "bubbly" or "soap-bubble" appearance.
+        <br><b>Severity:</b> Benign but can cause significant symptoms due to CSF obstruction.
+        ''',
+        'Neurocitoma (Central - Intraventricular, Extraventricular) T2': '''
+        <b>Neurocytomas (T2-weighted)</b>: Heterogeneous signal with cysts and calcifications. Iso- to hyperintense.
+        <br><b>Symptoms:</b> Headaches, gait disturbances, cognitive changes from hydrocephalus.
+        <br><b>Diagnostic Value:</b> T2 highlights cystic components and surrounding edema.
+        <br><b>Severity:</b> Benign; good prognosis with complete resection.
+        ''',
+        
+        # Other lesions (T1, T1C+, T2)
+        'Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1': '''
+        <b>Other Lesions</b>: Includes abscesses, cysts, and diverse encephalopathies (infections, metabolic, inflammatory).
+        <br><b>Symptoms:</b> Variable—fever, altered mental status, seizures, focal deficits (abscess); headaches, seizures (cyst); encephalopathy symptoms vary widely.
+        <br><b>Causes:</b> Infection (bacterial, fungal, parasitic), congenital (arachnoid cyst), metabolic, autoimmune.
+        <br><b>Severity:</b> Ranges from benign cysts to life-threatening abscesses or encephalitis.
+        <br><b>Treatment:</b> Antibiotics, drainage (abscess); surgical resection (symptomatic cysts); disease-specific for encephalopathies.
+        ''',
+        'Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1C+': '''
+        <b>Other Lesions (T1 post-contrast)</b>: Abscesses show rim enhancement; cysts typically non-enhancing; encephalopathies show variable enhancement.
+        <br><b>Symptoms:</b> Fever, headache, seizures (abscess); asymptomatic or headaches (cyst); altered mentation (encephalopathy).
+        <br><b>Diagnostic Value:</b> Rim enhancement with restricted diffusion suggests abscess; non-enhancing cyst benign.
+        <br><b>Severity:</b> Abscess requires urgent treatment; encephalopathies vary in severity.
+        ''',
+        'Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T2': '''
+        <b>Other Lesions (T2-weighted)</b>: Abscesses hyperintense with surrounding edema; cysts hyperintense without edema; encephalopathies show variable T2 changes.
+        <br><b>Symptoms:</b> Depends on etiology—fever, seizures, confusion, focal deficits.
+        <br><b>Diagnostic Value:</b> T2 highlights edema and lesion extent; DWI confirms abscess (restricted diffusion).
+        <br><b>Severity:</b> Urgent workup needed for abscesses and acute encephalopathies.
+        ''',
+        
+        # Schwannoma variants (T1, T1C+, T2)
+        'Schwannoma (Acustico, Vestibular - Trigeminal) T1': '''
+        <b>Schwannomas</b> are benign nerve sheath tumors, commonly affecting cranial nerve VIII (acoustic/vestibular schwannoma) or V (trigeminal).
+        <br><b>Symptoms:</b> Hearing loss, tinnitus, balance problems (acoustic); facial numbness, pain (trigeminal).
+        <br><b>Causes:</b> Sporadic or associated with neurofibromatosis type 2 (bilateral acoustic schwannomas).
+        <br><b>Severity:</b> Benign; slow-growing; can compress brainstem or cranial nerves if large.
+        <br><b>Treatment:</b> Observation (small), surgical resection, stereotactic radiosurgery (Gamma Knife).
+        ''',
+        'Schwannoma (Acustico, Vestibular - Trigeminal) T1C+': '''
+        <b>Schwannomas (T1 post-contrast)</b>: Intense, homogeneous enhancement; classic "ice cream cone" appearance in cerebellopontine angle (acoustic).
+        <br><b>Symptoms:</b> Progressive hearing loss, tinnitus, facial weakness/numbness.
+        <br><b>Diagnostic Value:</b> Enhancement confirms diagnosis; "ice cream cone" or "trumpet" shape pathognomonic for acoustic schwannoma.
+        <br><b>Severity:</b> Benign; larger lesions compress brainstem or cranial nerves, causing significant morbidity.
+        ''',
+        'Schwannoma (Acustico, Vestibular - Trigeminal) T2': '''
+        <b>Schwannomas (T2-weighted)</b>: Hyperintense with possible cystic components. Shows internal architecture (Antoni A/B areas).
+        <br><b>Symptoms:</b> Hearing loss, tinnitus, imbalance, facial symptoms.
+        <br><b>Diagnostic Value:</b> T2 highlights tumor extent and brainstem compression.
+        <br><b>Severity:</b> Benign; treatment needed for symptomatic or growing lesions.
         '''
+    }
+
+
+def get_mri_findings() -> Dict[str, List[str]]:
+    """
+    MRI hallmark signs and imaging characteristics for each class.
+    These are concise, commonly-reported patterns clinicians look for.
+
+    Returns:
+        Dictionary mapping class name -> list of imaging findings
+    """
+    return {
+        'Glioma': [
+            'Intra-axial mass with surrounding vasogenic edema and mass effect',
+            'Heterogeneous or ring enhancement post-contrast (especially high-grade)',
+            'Infiltrative margins crossing white matter tracts; possible necrotic core',
+            'T2/FLAIR hyperintensity with irregular borders'
+        ],
+        'Meningioma': [
+            'Extra-axial, well-circumscribed dural-based mass',
+            'Homogeneous strong enhancement; classic “dural tail” sign',
+            'Broad-based dural attachment, often causing hyperostosis of adjacent skull',
+            'CSF cleft sign separating mass from brain parenchyma'
+        ],
+        'Pituitary Tumor': [
+            'Sellar/suprasellar mass arising from pituitary gland',
+            'Iso- to hypointense on T1; variable enhancement post-contrast',
+            'Upward displacement/compression of optic chiasm in macroadenomas',
+            'Cavernous sinus invasion in larger lesions'
+        ],
+        'Normal': [
+            'No mass effect or midline shift',
+            'Preserved gray–white matter differentiation',
+            'No abnormal enhancement or restricted diffusion',
+            'Ventricular system and cisterns within normal limits'
+        ]
     }

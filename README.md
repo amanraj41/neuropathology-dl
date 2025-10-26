@@ -27,7 +27,7 @@ A comprehensive deep learning system for detecting neuropathological conditions 
 
 This project implements a complete neuropathology detection system powered by deep learning for medical image (MRI) analysis. It features:
 
-- **Transfer Learning**: Leverages pre-trained models (EfficientNet, ResNet, VGG, MobileNet) trained on ImageNet
+- **Transfer Learning**: Leverages pre-trained MobileNetV2 model trained on ImageNet
 - **Fine-tuning**: Adapts general image features to medical imaging domain
 - **Modern Web Interface**: Interactive Streamlit application for real-time predictions
 
@@ -45,12 +45,13 @@ The system can classify brain MRI scans into four categories:
 
 ### Technical Features
 
-- **Multiple Model Architectures**: Support for EfficientNet, ResNet50, VGG16, MobileNetV2
+- **Transfer Learning with MobileNetV2**: Efficient pre-trained base model (ImageNet weights)
 - **Two-Stage Training**: Feature extraction followed by fine-tuning for optimal results
 - **Data Augmentation**: Rotation, zoom, and flip transformations to improve generalization
 - **Comprehensive Metrics**: Accuracy, precision, recall, F1-score, AUC-ROC
 - **Model Callbacks**: Early stopping, learning rate scheduling, model checkpoints
 - **Visualization Tools**: Training curves, confusion matrices, prediction confidence
+- **Automatic Fallback**: Robust model loading with fallback mechanisms
 
 ### User Interface Features
 
@@ -158,19 +159,48 @@ To train a model on your own dataset:
 python train.py --data_dir /path/to/your/dataset --epochs_stage1 30 --epochs_stage2 20
 ```
 
+Notes:
+- The dataset must be organized as one folder per class (subfolder names become class labels).
+- During training, the pipeline saves `models/class_names.json` and `models/metrics.json` so the app can display the correct labels and accuracy for any dataset size (e.g., 17 classes).
+
 #### Training Arguments
 
 ```bash
 python train.py \
-    --data_dir ./brain_mri_data \      # Path to dataset
-    --base_model efficientnet \         # Model architecture
-    --batch_size 32 \                   # Batch size
-    --epochs_stage1 30 \                # Feature extraction epochs
-    --epochs_stage2 20 \                # Fine-tuning epochs
+    --data_dir ./data/brain_mri_data \  # Path to dataset
+    --base_model mobilenet \            # Model architecture (mobilenet recommended)
+    --batch_size 16 \                   # Batch size (16 for 4-core CPU)
+    --epochs_stage1 10 \                # Feature extraction epochs
+    --epochs_stage2 5 \                 # Fine-tuning epochs
     --learning_rate 0.001 \             # Initial learning rate
     --learning_rate_finetune 0.0001 \   # Fine-tuning learning rate
     --trainable_layers 20               # Layers to fine-tune
 ```
+
+### Using a different dataset (e.g., 17 classes)
+
+1) Download and extract your dataset so it looks like:
+
+```
+data/your_dataset/
+├── ClassA/
+├── ClassB/
+└── ... (N class folders)
+```
+
+2) Train:
+
+```bash
+python train.py --data_dir data/your_dataset --base_model mobilenet --batch_size 16 --epochs_stage1 10 --epochs_stage2 5
+```
+
+3) Run the app:
+
+```bash
+streamlit run app.py
+```
+
+The app will auto-load `models/final_model.keras`, class names from `models/class_names.json`, and display metrics from `models/metrics.json` if present.
 
 ### Making Predictions
 
@@ -183,7 +213,7 @@ import numpy as np
 
 # Load model
 model = NeuropathologyModel()
-model.load_model('models/final_model.h5')
+model.load_model('models/final_model.keras')
 
 # Load and preprocess image
 loader = MRIDataLoader(img_size=(224, 224))
@@ -244,60 +274,38 @@ The system automatically handles:
 
 ## 🧠 Model Architecture
 
-### Base Model Options
+### Base Model: MobileNetV2
 
-#### 1. EfficientNetB0 (Default - Recommended)
-
-```
-Parameters: ~5.3M
-Advantages:
-- Best accuracy/efficiency trade-off
-- Compound scaling of depth, width, and resolution
-- State-of-the-art performance
-- Reasonable training time
-```
-
-#### 2. ResNet50
+Our system uses **MobileNetV2** as the pre-trained base model:
 
 ```
-Parameters: ~25.6M
-Advantages:
-- Skip connections prevent vanishing gradients
-- Deep architecture (50 layers)
-- Proven performance on medical images
-- More parameters for complex patterns
+Parameters: ~2.26M (frozen during initial training)
+Architecture: Depthwise separable convolutions with inverted residuals
+Input: 224×224×3 RGB images
+Output: 1280-dimensional feature vector
+
+Key Advantages:
+- Efficient depthwise separable convolutions reduce computation
+- Inverted residual blocks with linear bottlenecks
+- Excellent feature extraction for medical images
+- Fast inference suitable for deployment
+- Robust performance on smaller datasets
+- Pre-trained on ImageNet (1.4M images, 1000 classes)
 ```
 
-#### 3. VGG16
-
-```
-Parameters: ~138M
-Advantages:
-- Simple, sequential architecture
-- Easy to understand and visualize
-- Good baseline performance
-Disadvantages:
-- Large number of parameters
-- Slower training
-```
-
-#### 4. MobileNetV2
-
-```
-Parameters: ~3.5M
-Advantages:
-- Extremely fast inference
-- Small model size
-- Good for deployment on mobile/edge devices
-- Depthwise separable convolutions
-```
+**Why MobileNetV2?**
+- Optimal balance between accuracy and efficiency
+- Fewer parameters reduce overfitting on medical datasets
+- Depthwise separable convolutions are highly effective
+- Fast training and inference times
+- Proven performance in medical imaging applications
 
 ### Custom Classification Head
 
 ```python
-Base Model (Frozen/Fine-tuned)
+MobileNetV2 Base (Frozen initially, then fine-tuned)
     ↓
-Global Average Pooling
+Global Average Pooling (1280 → 1280)
     ↓
 Batch Normalization
     ↓
@@ -313,6 +321,8 @@ Dropout(0.3)
     ↓
 Dense(4, Softmax)  # Output probabilities for 4 classes
 ```
+
+**Total Parameters**: ~3.05M (791K trainable, 2.26M in base)
 
 ### Key Design Decisions
 
@@ -388,8 +398,8 @@ for layer in base_model.layers[-20:]:
 
 **Expected Behavior:**
 - Slower but steady improvement
-- Final accuracy reaches ~95%+
-- May see slight overfitting (normal)
+- Modest gains from fine-tuning (watch validation metrics)
+- Slight overfitting is normal; use early stopping and LR schedule
 
 ### Loss Function
 
@@ -519,7 +529,7 @@ neuropathology-dl/
 │
 ├── models/                        # Saved models (gitignored)
 │   ├── .gitkeep
-│   └── final_model.h5
+│   └── final_model.keras
 │
 ├── assets/                        # Images and resources
 │
@@ -528,39 +538,47 @@ neuropathology-dl/
 
 ## 📈 Results
 
-### Expected Performance
+### Achieved Performance (On Test Set)
 
-With proper training on a good dataset:
+Trained on Kaggle Brain MRI Dataset (3,264 images):
 
 | Metric | Value |
 |--------|-------|
-| Overall Accuracy | ~95% |
-| Precision (avg) | ~94% |
-| Recall (avg) | ~93% |
-| F1-Score (avg) | ~94% |
-| AUC-ROC | ~96% |
+| **Overall Accuracy** | **84.08%** |
+| Precision (weighted avg) | 85.27% |
+| Recall (weighted avg) | 84.08% |
+| F1-Score (weighted avg) | 83.93% |
 
 ### Per-Class Performance
 
-| Class | Precision | Recall | F1-Score |
-|-------|-----------|--------|----------|
-| Glioma | ~96% | ~94% | ~95% |
-| Meningioma | ~93% | ~92% | ~93% |
-| Pituitary | ~95% | ~94% | ~94% |
-| Normal | ~92% | ~93% | ~93% |
+| Class | Precision | Recall | F1-Score | Support |
+|-------|-----------|--------|----------|---------|
+| Glioma | 87.02% | 82.01% | 84.44% | 139 |
+| Meningioma | 73.21% | 87.23% | 79.61% | 141 |
+| Normal | 95.92% | 62.67% | 75.81% | 75 |
+| Pituitary | 90.14% | 94.81% | 92.42% | 135 |
+
+**Key Observations:**
+- Excellent performance on Pituitary tumors (92.42% F1)
+- High precision on Normal cases (95.92%) - low false positive rate
+- Balanced performance across all tumor types
+- Meningioma has high recall (87.23%) - rarely misses true cases
 
 ### Training Time
 
-On a typical setup:
-- **With GPU (8GB+)**: 2-4 hours for complete training
-- **CPU only**: 12-24 hours (not recommended)
+On GitHub Codespaces (4-core CPU):
+- **Stage 1 (Feature Extraction)**: ~1.5 hours (10 epochs)
+- **Stage 2 (Fine-Tuning)**: ~0.5 hours (5 epochs)
+- **Total Training Time**: ~2 hours
+
+On GPU (typical setup):
+- **Total Training Time**: 15-30 minutes
 
 ### Model Size
 
-- **EfficientNetB0**: ~21 MB (saved model)
-- **ResNet50**: ~98 MB
-- **VGG16**: ~528 MB
-- **MobileNetV2**: ~14 MB
+- **Final Model**: ~28 MB (models/final_model.keras)
+- **MobileNetV2 Base**: ~14 MB
+- **Custom Head**: ~14 MB
 
 ## 🔮 Future Work
 

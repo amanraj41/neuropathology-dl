@@ -17,6 +17,8 @@ from PIL import Image
 import sys
 import os
 import plotly.graph_objects as go
+from urllib.request import urlopen, Request
+from io import BytesIO
 
 # Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -25,7 +27,7 @@ from src.models.neuropathology_model import NeuropathologyModel, create_callback
 from src.data.data_loader import MRIDataLoader
 from src.utils.helpers import (
     Visualizer, ModelEvaluator, get_class_names, 
-    get_class_descriptions, create_sample_data
+    get_class_descriptions, get_mri_findings, create_sample_data
 )
 
 # Page configuration
@@ -105,6 +107,7 @@ class NeuropathologyApp:
         """Initialize the application."""
         self.class_names = get_class_names()
         self.class_descriptions = get_class_descriptions()
+        self.class_mri_findings = get_mri_findings()
         self.data_loader = MRIDataLoader(img_size=(224, 224))
         
         # Initialize session state
@@ -112,6 +115,30 @@ class NeuropathologyApp:
             st.session_state.model = None
         if 'model_loaded' not in st.session_state:
             st.session_state.model_loaded = False
+        
+        # Try to load trained model if available
+        final_model_path = os.path.join('models', 'final_model.keras')
+        if not st.session_state.model_loaded and os.path.exists(final_model_path):
+            try:
+                wrapper = NeuropathologyModel()
+                wrapper.load_model(final_model_path)
+                st.session_state.model = wrapper
+                st.session_state.model_loaded = True
+                # Try to load class names and metrics for dynamic UI
+                class_names_path = os.path.join('models', 'class_names.json')
+                metrics_path = os.path.join('models', 'metrics.json')
+                if os.path.exists(class_names_path):
+                    import json
+                    with open(class_names_path, 'r') as f:
+                        saved_names = json.load(f)
+                    if isinstance(saved_names, list) and len(saved_names) >= 2:
+                        self.class_names = saved_names
+                if os.path.exists(metrics_path):
+                    import json
+                    with open(metrics_path, 'r') as f:
+                        st.session_state.metrics = json.load(f)
+            except Exception as e:
+                st.warning(f"Could not load trained model: {e}. Using demo predictions instead.")
     
     def run(self):
         """Run the main application."""
@@ -144,20 +171,30 @@ class NeuropathologyApp:
         
         st.sidebar.markdown("---")
         
-        st.sidebar.markdown("""
+        # Sidebar quick info (dynamic)
+        acc_text = None
+        if 'metrics' in st.session_state and isinstance(st.session_state.metrics, dict):
+            try:
+                acc = float(st.session_state.metrics.get('accuracy', None))
+                if acc:
+                    acc_text = f"**Accuracy**: {acc*100:.2f}%  "
+            except Exception:
+                pass
+        classes_preview = ', '.join(self.class_names[:6])
+        more = max(0, len(self.class_names) - 6)
+        more_text = f" and {more} more" if more > 0 else ""
+        sidebar_md = f"""
         ### 📋 Quick Info
-        
-        This system uses **Transfer Learning** with pre-trained deep neural networks to detect:
-        
-        - 🔴 Glioma
-        - 🟡 Meningioma  
-        - 🟢 Pituitary Tumor
-        - 🔵 Normal Brain
-        
-        **Accuracy**: ~95%+  
-        **Model**: EfficientNetB0  
-        **Input**: 224×224 MRI images
-        """)
+
+        This system uses **Transfer Learning** with pre-trained deep neural networks.
+
+        **Model**: MobileNetV2  
+        **Input**: 224×224 MRI images  
+        **Classes**: {len(self.class_names)} (e.g., {classes_preview}{more_text})
+        """
+        if acc_text:
+            sidebar_md += "\n\n" + acc_text
+        st.sidebar.markdown(sidebar_md)
         
         st.sidebar.markdown("---")
         st.sidebar.markdown("### ⚙️ Settings")
@@ -185,7 +222,7 @@ class NeuropathologyApp:
             conditions. The system combines:
             </p>
             <ul>
-                <li><strong>Transfer Learning</strong>: Using pre-trained models (EfficientNet, ResNet)</li>
+                <li><strong>Transfer Learning</strong>: Using pre-trained MobileNetV2 model</li>
                 <li><strong>Fine-tuning</strong>: Adapting general features to medical imaging</li>
                 <li><strong>Modern UI</strong>: Interactive Streamlit interface for instant diagnosis</li>
             </ul>
@@ -193,21 +230,10 @@ class NeuropathologyApp:
             """, unsafe_allow_html=True)
             
             st.markdown("""
-            <div class="warning-box">
-            <h3>⚠️ Important Notice</h3>
-            <p>
-            This system is designed for <strong>research and demonstration purposes only</strong>.
-            It should not be used as the sole basis for medical diagnosis. Always consult 
-            qualified healthcare professionals for medical decisions.
-            </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("""
                 ### 🚀 Key Features
 
                 1. **Production-Ready DL Pipeline**
-                    - Transfer learning from ImageNet pre-trained models
+                    - Transfer learning from ImageNet pre-trained MobileNetV2
                     - Two-stage training: feature extraction + fine-tuning
                     - Robust callbacks: checkpointing, early stopping, LR scheduling
 
@@ -219,15 +245,16 @@ class NeuropathologyApp:
 
                 3. **Interactive Analysis**
                     - Real-time prediction with confidence scores
-                    - Detailed pathology descriptions and confidence bars
+                    - Detailed pathology descriptions and MRI characteristics
                     - Interactive Plotly visualizations
 
                 4. **Model Implementation Details**
-                    - Base: EfficientNetB0 (include_top=False)
+                    - Base: MobileNetV2 (2.26M params, include_top=False)
                     - Head: GAP → BatchNorm → Dense(512, ReLU) → Dropout(0.5)
                       → Dense(256, ReLU) → BatchNorm → Dropout(0.3) → Dense(4, Softmax)
                     - Optimizer: Adam (stage 1: 1e-3, fine-tune: 1e-4)
                     - Metrics: Accuracy, Precision, Recall, AUC
+                    - Achieved Test Accuracy: 84.08%
             """)
         
         with col2:
@@ -236,12 +263,19 @@ class NeuropathologyApp:
             """)
             
             # Create metric cards
+            # Metrics card values (dynamic if metrics available)
+            acc_val = None
+            if 'metrics' in st.session_state and isinstance(st.session_state.metrics, dict):
+                try:
+                    acc_val = f"{float(st.session_state.metrics.get('accuracy', 0))*100:.2f}%"
+                except Exception:
+                    acc_val = None
             metrics = {
-                "Model Type": "EfficientNetB0",
-                "Parameters": "~5.3M",
+                "Model Type": "MobileNetV2",
+                "Parameters": "3.05M total",
                 "Input Size": "224×224×3",
-                "Classes": "4",
-                "Accuracy": "~95%+",
+                "Classes": str(len(self.class_names)),
+                "Accuracy": acc_val or "-",
                 "Framework": "TensorFlow/Keras"
             }
             
@@ -263,28 +297,53 @@ class NeuropathologyApp:
         </div>
         """, unsafe_allow_html=True)
         
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Choose a brain MRI image...",
-            type=['png', 'jpg', 'jpeg'],
-            help="Upload a brain MRI scan in PNG or JPEG format"
-        )
-        
+        # Input sources: file upload or URL
+        col_up, col_url = st.columns([1, 1])
+        with col_up:
+            uploaded_file = st.file_uploader(
+                "Choose a brain MRI image...",
+                type=['png', 'jpg', 'jpeg'],
+                help="Upload a brain MRI scan in PNG or JPEG format"
+            )
+        with col_url:
+            image_url = st.text_input(
+                "Or paste an image URL (jpg/jpeg/png)",
+                placeholder="https://.../brain_mri.jpg"
+            )
+            fetch_from_url = st.button("🌐 Fetch from URL", use_container_width=True)
+
+        image = None
+        src_label = None
         if uploaded_file is not None:
+            try:
+                image = Image.open(uploaded_file)
+                src_label = 'Uploaded MRI Scan'
+            except Exception as e:
+                st.error(f"Could not open uploaded image: {e}")
+        elif image_url and fetch_from_url:
+            try:
+                req = Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urlopen(req, timeout=10) as resp:
+                    data = resp.read()
+                image = Image.open(BytesIO(data))
+                src_label = 'Fetched MRI Scan'
+            except Exception as e:
+                st.error(f"Failed to fetch image from URL: {e}")
+
+        if image is not None:
             # Display uploaded image
             col1, col2 = st.columns([1, 1])
             
             with col1:
                 st.markdown("### 📷 Uploaded Image")
-                image = Image.open(uploaded_file)
-                st.image(image, caption='Uploaded MRI Scan', use_column_width=True)
+                st.image(image, caption=src_label, use_container_width=True)
                 
                 # Image info
                 st.markdown(f"""
                 **Image Details:**
                 - Size: {image.size[0]}×{image.size[1]} pixels
                 - Mode: {image.mode}
-                - Format: {uploaded_file.type}
+                - Source: {src_label}
                 """)
             
             with col2:
@@ -295,17 +354,19 @@ class NeuropathologyApp:
                     with st.spinner("Analyzing image with deep learning model..."):
                         # Preprocess image
                         try:
-                            # Save uploaded file temporarily
+                            # Save temp image for preprocessing
                             temp_path = "/tmp/uploaded_image.jpg"
-                            image.save(temp_path)
+                            image.convert('RGB').save(temp_path)
                             
                             # Load and preprocess
                             img_array = self.data_loader.load_and_preprocess_image(temp_path)
                             img_batch = np.expand_dims(img_array, axis=0)
                             
-                            # Make prediction (using dummy model for now)
-                            # In production, load actual trained model
-                            predictions = self.predict_with_demo_model(img_batch)
+                            # Make prediction using trained model if loaded, otherwise demo
+                            if st.session_state.model_loaded and st.session_state.model is not None:
+                                predictions = st.session_state.model.predict(img_batch)
+                            else:
+                                predictions = self.predict_with_demo_model(img_batch)
                             
                             # Get predicted class and confidence
                             predicted_class = np.argmax(predictions[0])
@@ -322,20 +383,30 @@ class NeuropathologyApp:
         else:
             st.info("👆 Please upload a brain MRI image to begin analysis")
             
-            # Show demo images
             st.markdown("---")
-            st.markdown("### 📁 Demo Mode")
-            st.markdown("""
-            <div class="info-box">
-            No trained model available yet. The system will demonstrate with random predictions.
-            To use a real trained model, you need to:
-            <ol>
-                <li>Obtain a brain MRI dataset (e.g., from Kaggle)</li>
-                <li>Train the model using the provided training script</li>
-                <li>Load the trained model in this application</li>
-            </ol>
-            </div>
-            """, unsafe_allow_html=True)
+            if st.session_state.model_loaded:
+                st.markdown("""
+                <div class="success-box">
+                <h4>Trained Model Loaded</h4>
+                <p>
+                The trained model (<code>models/final_model.keras</code>) is loaded. 
+                Upload an image to get real predictions.
+                </p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("### 📁 Demo Mode")
+                st.markdown("""
+                <div class="info-box">
+                No trained model available yet. The system will demonstrate with random predictions.
+                To use a real trained model, you need to:
+                <ol>
+                    <li>Obtain a brain MRI dataset (e.g., from Kaggle)</li>
+                    <li>Train the model using the provided training script</li>
+                    <li>Reload this app; it will auto-load the saved model</li>
+                </ol>
+                </div>
+                """, unsafe_allow_html=True)
     
     def predict_with_demo_model(self, img_batch: np.ndarray) -> np.ndarray:
         """
@@ -407,12 +478,18 @@ class NeuropathologyApp:
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Class description
+        # Class description and characteristic MRI findings
         st.markdown("### 📖 About This Condition")
+        mri_points = ''.join([f'<li>{pt}</li>' for pt in self.class_mri_findings.get(class_name, [])])
+        desc_text = self.class_descriptions.get(class_name, 'Detailed description unavailable for this class.')
         st.markdown(f"""
         <div class="info-box">
         <h4>{class_name}</h4>
-        {self.class_descriptions[class_name]}
+        {desc_text}
+        <h5>Characteristic MRI Findings</h5>
+        <ul>
+        {mri_points}
+        </ul>
         </div>
         """, unsafe_allow_html=True)
         
@@ -429,8 +506,9 @@ class NeuropathologyApp:
         <div class="info-box">
         <h3>Model Architecture</h3>
         <p>
-        This system uses <strong>Transfer Learning</strong> with EfficientNetB0, 
-        a state-of-the-art convolutional neural network that balances accuracy and efficiency.
+        This system uses <strong>Transfer Learning</strong> with MobileNetV2, 
+        an efficient convolutional neural network that uses depthwise separable convolutions 
+        for optimal performance on medical imaging tasks.
         </p>
         </div>
         """, unsafe_allow_html=True)
@@ -442,10 +520,10 @@ class NeuropathologyApp:
             st.markdown("""
             ### 🏗️ Architecture Details
             
-            **Base Model: EfficientNetB0**
-            - Compound scaling of depth, width, and resolution
-            - Optimized for efficiency and accuracy
-            - Pre-trained on ImageNet (1.2M images, 1000 classes)
+            **Base Model: MobileNetV2**
+            - Depthwise separable convolutions; inverted residual blocks
+            - Optimized for efficiency with strong feature extraction
+            - Pre-trained on ImageNet (1.4M images, 1000 classes)
             
             **Custom Classification Head:**
             1. Global Average Pooling (reduces spatial dimensions)
@@ -457,9 +535,9 @@ class NeuropathologyApp:
             7. Dropout (0.3)
             8. Output Layer (4 units, Softmax activation)
             
-            **Total Parameters:** ~5.3 Million
-            - Trainable: ~2.1 Million
-            - Frozen: ~3.2 Million
+            **Total Parameters:** 3.05 Million
+            - Trainable: 0.79 Million
+            - Frozen (base): 2.26 Million
             """)
         
         with col2:
@@ -497,14 +575,14 @@ class NeuropathologyApp:
         st.markdown("---")
         
         # Model performance
-        st.markdown("### 📈 Expected Performance")
+        st.markdown("### 📈 Performance (Test Set)")
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             st.markdown("""
             <div class="metric-card">
-            <h2>~95%</h2>
+            <h2>84.08%</h2>
             <p>Accuracy</p>
             </div>
             """, unsafe_allow_html=True)
@@ -512,24 +590,24 @@ class NeuropathologyApp:
         with col2:
             st.markdown("""
             <div class="metric-card">
-            <h2>~94%</h2>
-            <p>Precision</p>
+            <h2>85.27%</h2>
+            <p>Precision (weighted)</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col3:
             st.markdown("""
             <div class="metric-card">
-            <h2>~93%</h2>
-            <p>Recall</p>
+            <h2>84.08%</h2>
+            <p>Recall (weighted)</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col4:
             st.markdown("""
             <div class="metric-card">
-            <h2>~96%</h2>
-            <p>AUC</p>
+            <h2>83.93%</h2>
+            <p>F1-Score (weighted)</p>
             </div>
             """, unsafe_allow_html=True)
         

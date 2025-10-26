@@ -21,6 +21,7 @@ import sys
 import numpy as np
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
+import json
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -206,10 +207,16 @@ def train_model(args):
     print("\nModel Architecture:")
     print(model_wrapper.get_model_summary())
     
-    # Create callbacks
+    # Create callbacks and persist class names for reproducibility
     os.makedirs('models', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
-    callbacks = create_callbacks(model_path='models/best_model.h5')
+    try:
+        with open(os.path.join('models', 'class_names.json'), 'w') as f:
+            json.dump(class_names, f, indent=2)
+        print("✓ Saved class names to models/class_names.json")
+    except Exception as e:
+        print(f"[Warning] Could not save class names: {e}")
+    callbacks = create_callbacks(model_path='models/best_model.keras')
     
     # Stage 1: Train with frozen base
     print("\n" + "="*70)
@@ -232,7 +239,7 @@ def train_model(args):
         
         model_wrapper.fine_tune_model(learning_rate=args.learning_rate_finetune)
         
-        callbacks = create_callbacks(model_path='models/best_model_finetuned.h5')
+        callbacks = create_callbacks(model_path='models/best_model_finetuned.keras')
         
         history2 = model.fit(
             train_gen,
@@ -254,10 +261,23 @@ def train_model(args):
     evaluator = ModelEvaluator()
     evaluation = evaluator.evaluate_model(model, test_gen, class_names)
     evaluator.print_evaluation_report(evaluation)
+
+    # Persist evaluation metrics
+    try:
+        metrics_out = {
+            'accuracy': float(evaluation['accuracy']),
+            'classification_report': evaluation['classification_report']
+        }
+        with open(os.path.join('models', 'metrics.json'), 'w') as f:
+            json.dump(metrics_out, f, indent=2)
+        print("✓ Saved evaluation metrics to models/metrics.json")
+    except Exception as e:
+        print(f"[Warning] Could not save metrics.json: {e}")
     
     # Save final model
-    final_model_path = 'models/final_model.h5'
+    final_model_path = 'models/final_model.keras'
     model_wrapper.save_model(final_model_path)
+    print(f"\n✓ Model saved to {final_model_path}")
     print(f"\n✓ Model saved to {final_model_path}")
     
     # Plot training history
@@ -282,8 +302,8 @@ def train_model(args):
     print("TRAINING COMPLETE!")
     print("="*70)
     print(f"\nFinal Model: {final_model_path}")
-    print(f"Best Model: models/best_model_finetuned.h5" if args.fine_tune 
-          else "models/best_model.h5")
+    print(f"Best Model: models/best_model_finetuned.keras" if args.fine_tune 
+          else "models/best_model.keras")
     print(f"Test Accuracy: {evaluation['accuracy']:.4f}")
 
 
