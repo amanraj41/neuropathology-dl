@@ -34,12 +34,17 @@ This project implements a complete neuropathology detection system powered by de
 
 ### Detected Conditions
 
-The system can classify brain MRI scans into four categories:
+The system can classify brain MRI scans into **17 distinct categories**, providing comprehensive neuropathological analysis across multiple imaging modalities (T1, T1C+, T2):
 
-1. **Glioma**: Brain tumors originating from glial cells
-2. **Meningioma**: Tumors of the meninges (brain/spinal cord membranes)
-3. **Pituitary Tumor**: Tumors of the pituitary gland
-4. **Normal**: No pathological findings
+**Primary Tumor Categories:**
+1-3. **Glioma** (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) - T1, T1C+, T2
+4-6. **Meningioma** (de Baixo Grau, Atípico, Anaplásico, Transicional) - T1, T1C+, T2
+7-8. **NORMAL** - T1, T2
+9-11. **Neurocitoma** (Central - Intraventricular, Extraventricular) - T1, T1C+, T2
+12-14. **Outros Tipos de Lesões** (Abscessos, Cistos, Encefalopatias Diversas) - T1, T1C+, T2
+15-17. **Schwannoma** (Acustico, Vestibular - Trigeminal) - T1, T1C+, T2
+
+Each class includes detailed clinical information and characteristic MRI findings.
 
 ## ✨ Features
 
@@ -56,8 +61,10 @@ The system can classify brain MRI scans into four categories:
 ### User Interface Features
 
 - **Modern Web Design**: Clean, intuitive Streamlit interface
-- **Real-time Predictions**: Upload MRI images and get instant diagnoses
-- **Confidence Scores**: Detailed probability distributions for all classes
+- **Manual Model Loading**: Load trained models on-demand with dropdown selection
+- **Real-time Predictions**: Upload MRI images or fetch from URL for instant diagnosis
+- **Confidence Scores**: Detailed probability distributions for all 17 classes
+- **Clinical Information**: Comprehensive medical descriptions and MRI findings for each diagnosed pathology
 - **Interactive Visualizations**: Plotly charts for prediction analysis
 - **Responsive Layout**: Works on desktop and mobile devices
 
@@ -81,7 +88,7 @@ The system can classify brain MRI scans into four categories:
 │                  Deep Learning Layer                          │
 │  ┌──────────────────────────────────────────────────┐        │
 │  │           Pre-trained Base Model                 │        │
-│  │  (EfficientNet / ResNet / VGG / MobileNet)       │        │
+│  │              (MobileNetV2)                       │        │
 │  └──────────────────────┬───────────────────────────┘        │
 │  ┌──────────────────────▼───────────────────────────┐        │
 │  │         Custom Classification Head               │        │
@@ -232,35 +239,36 @@ print(f"Predicted: {predicted_class}, Confidence: {confidence}")
 ### Expected Dataset Structure
 
 ```
-data/
-├── Glioma/
-│   ├── image1.jpg
-│   ├── image2.jpg
-│   └── ...
-├── Meningioma/
-│   ├── image1.jpg
-│   ├── image2.jpg
-│   └── ...
-├── Pituitary/
-│   ├── image1.jpg
-│   ├── image2.jpg
-│   └── ...
-└── Normal/
-    ├── image1.jpg
-    ├── image2.jpg
-    └── ...
+data/brain_mri_17/
+├── Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1/
+├── Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+/
+├── Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2/
+├── Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1/
+├── Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1C+/
+├── Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T2/
+├── NORMAL T1/
+├── NORMAL T2/
+├── Neurocitoma (Central - Intraventricular, Extraventricular) T1/
+├── Neurocitoma (Central - Intraventricular, Extraventricular) T1C+/
+├── Neurocitoma (Central - Intraventricular, Extraventricular) T2/
+├── Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1/
+├── Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1C+/
+├── Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T2/
+├── Schwannoma (Acustico, Vestibular - Trigeminal) T1/
+├── Schwannoma (Acustico, Vestibular - Trigeminal) T1C+/
+└── Schwannoma (Acustico, Vestibular - Trigeminal) T2/
 ```
 
-### Recommended Datasets
+### Recommended Dataset
 
-1. **Brain MRI Images for Brain Tumor Detection** (Kaggle)
-   - ~3000 MRI images
-   - 4 classes (Glioma, Meningioma, Pituitary, No Tumor)
-   - Pre-processed and ready to use
+**Kaggle Brain MRI 17-Class Dataset** (used for this implementation)
+- **17 neuropathology classes** across multiple MRI modalities
+- **Comprehensive clinical spectrum**: Primary tumors, benign lesions, normal scans, and diverse pathologies
+- **Multiple imaging modalities**: T1, T1 post-contrast (T1C+), T2-weighted sequences
+- **Pre-processed and ready to use**
+- **Source**: [Kaggle - Brain MRI Classification](https://www.kaggle.com/)
 
-2. **BraTS (Brain Tumor Segmentation)** Challenge Dataset
-   - More advanced dataset with segmentation masks
-   - Multiple imaging modalities
+**Note**: This system's clinical descriptions and MRI findings are specifically tailored for the 17-class dataset. Using a different dataset will require updating the class descriptions in `src/utils/helpers.py` to match your specific pathology classes.
 
 ### Data Preprocessing
 
@@ -319,7 +327,7 @@ Batch Normalization
     ↓
 Dropout(0.3)
     ↓
-Dense(4, Softmax)  # Output probabilities for 4 classes
+Dense(17, Softmax)  # Output probabilities for 17 classes
 ```
 
 **Total Parameters**: ~3.05M (791K trainable, 2.26M in base)
@@ -540,39 +548,41 @@ neuropathology-dl/
 
 ### Achieved Performance (On Test Set)
 
-Trained on Kaggle Brain MRI Dataset (3,264 images):
+Trained on Kaggle Brain MRI 17-Class Dataset:
 
 | Metric | Value |
 |--------|-------|
-| **Overall Accuracy** | **84.08%** |
-| Precision (weighted avg) | 85.27% |
-| Recall (weighted avg) | 84.08% |
-| F1-Score (weighted avg) | 83.93% |
+| **Overall Accuracy** | **78.13%** |
+| Precision (weighted avg) | 82.33% |
+| Recall (weighted avg) | 78.13% |
+| F1-Score (weighted avg) | 77.44% |
 
-### Per-Class Performance
+### Top Performing Classes
 
-| Class | Precision | Recall | F1-Score | Support |
-|-------|-----------|--------|----------|---------|
-| Glioma | 87.02% | 82.01% | 84.44% | 139 |
-| Meningioma | 73.21% | 87.23% | 79.61% | 141 |
-| Normal | 95.92% | 62.67% | 75.81% | 75 |
-| Pituitary | 90.14% | 94.81% | 92.42% | 135 |
+| Class | F1-Score | Support |
+|-------|----------|---------|
+| NORMAL T1 | 97.56% | 41 |
+| Neurocitoma T1C+ | 96.20% | 39 |
+| Schwannoma T1C+ | 90.57% | 29 |
+| Outros Tipos de Lesões T1 | 90.48% | 23 |
+| Meningioma T1C+ | 89.90% | 94 |
+| Glioma T1C+ | 89.44% | 76 |
 
 **Key Observations:**
-- Excellent performance on Pituitary tumors (92.42% F1)
-- High precision on Normal cases (95.92%) - low false positive rate
-- Balanced performance across all tumor types
-- Meningioma has high recall (87.23%) - rarely misses true cases
+- Excellent detection of normal brain scans (97.56% F1-score)
+- Strong performance on contrast-enhanced (T1C+) sequences
+- Post-contrast imaging provides superior diagnostic information
+- Balanced performance across 663 test samples
 
 ### Training Time
 
 On GitHub Codespaces (4-core CPU):
 - **Stage 1 (Feature Extraction)**: ~1.5 hours (10 epochs)
-- **Stage 2 (Fine-Tuning)**: ~0.5 hours (5 epochs)
-- **Total Training Time**: ~2 hours
+- **Stage 2 (Fine-Tuning)**: ~0.8 hours (5 epochs)
+- **Total Training Time**: ~2.3 hours
 
 On GPU (typical setup):
-- **Total Training Time**: 15-30 minutes
+- **Total Training Time**: 20-40 minutes
 
 ### Model Size
 

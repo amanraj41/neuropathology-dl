@@ -107,39 +107,34 @@ python train.py --data_dir /path/to/your/dataset --epochs_stage1 30 --epochs_sta
 
 ## Dataset Format
 
-Your dataset should be organized like this:
+Your dataset should be organized with one folder per class (folder names become class labels):
 
 ```
 your_dataset/
-├── Glioma/
+├── Class_1/
 │   ├── image1.jpg
 │   ├── image2.jpg
 │   └── ...
-├── Meningioma/
+├── Class_2/
 │   ├── image1.jpg
-│   ├── image2.jpg
 │   └── ...
-├── Pituitary/
-│   ├── image1.jpg
-│   ├── image2.jpg
-│   └── ...
-└── Normal/
-    ├── image1.jpg
-    ├── image2.jpg
+└── Class_N/
     └── ...
 ```
 
 ### Recommended Dataset
 
-**Brain MRI Images for Brain Tumor Detection** (Available on Kaggle)
-- ~3000 MRI images
-- 4 classes: Glioma, Meningioma, Pituitary, No Tumor
+**Kaggle Brain MRI 17-Class Dataset** (Used for this implementation)
+- 17 neuropathology classes across T1, T1C+, T2 modalities
 - Pre-processed and ready to use
+- Comprehensive clinical spectrum
+
+**Note**: This system's UI and clinical descriptions are tailored for the 17-class dataset. Using a different dataset requires updating `src/utils/helpers.py` to match your specific classes.
 
 To use:
 1. Download from Kaggle
-2. Extract to a directory
-3. Run training script with that directory
+2. Extract to `data/brain_mri_17/`
+3. Run training: `python train.py --data_dir data/brain_mri_17`
 
 ## What to Explore
 
@@ -148,6 +143,7 @@ To use:
 When you run `streamlit run app.py`, explore:
 
 - **Home Page**: Project overview and key features
+- **Detection Page**: Load trained model, upload MRI scans, get predictions with clinical info
 - **Detection Page**: Upload images and get predictions
 - **About Model Page**: Technical details and architecture
 - **Theory Page**: Learn deep learning concepts with detailed explanations
