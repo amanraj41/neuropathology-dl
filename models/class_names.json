@@ -1,19 +1,6 @@
 [
-  "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1",
-  "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+",
-  "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2",
-  "Meningioma (de Baixo Grau, At\u00edpico, Anapl\u00e1sico, Transicional) T1",
-  "Meningioma (de Baixo Grau, At\u00edpico, Anapl\u00e1sico, Transicional) T1C+",
-  "Meningioma (de Baixo Grau, At\u00edpico, Anapl\u00e1sico, Transicional) T2",
-  "NORMAL T1",
-  "NORMAL T2",
-  "Neurocitoma (Central - Intraventricular, Extraventricular) T1",
-  "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+",
-  "Neurocitoma (Central - Intraventricular, Extraventricular) T2",
-  "Outros Tipos de Les\u00f5es (Abscessos, Cistos, Encefalopatias Diversas) T1",
-  "Outros Tipos de Les\u00f5es (Abscessos, Cistos, Encefalopatias Diversas) T1C+",
-  "Outros Tipos de Les\u00f5es (Abscessos, Cistos, Encefalopatias Diversas) T2",
-  "Schwannoma (Acustico, Vestibular - Trigeminal) T1",
-  "Schwannoma (Acustico, Vestibular - Trigeminal) T1C+",
-  "Schwannoma (Acustico, Vestibular - Trigeminal) T2"
+  "Glioma",
+  "Meningioma",
+  "Normal",
+  "Pituitary"
 ]
