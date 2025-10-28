@@ -367,7 +367,7 @@ class NeuropathologyApp:
                 "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+",
                 "Neurocitoma (Central - Intraventricular, Extraventricular) T2"
             ],
-            "🩷 Schwannomas (Nerve Sheath Tumors)": [
+            "Schwannomas (Nerve Sheath Tumors)": [
                 "Schwannoma (Acustico, Vestibular - Trigeminal) T1",
                 "Schwannoma (Acustico, Vestibular - Trigeminal) T1C+",
                 "Schwannoma (Acustico, Vestibular - Trigeminal) T2"
@@ -384,7 +384,11 @@ class NeuropathologyApp:
         }
 
         for group_name, classes in class_groups.items():
-            st.markdown(f"#### {group_name}")
+            # Add pink circle for Schwannomas group
+            if "Schwannomas" in group_name:
+                st.markdown(f"#### <span style='color: #e91e63; font-size: 1.0em;'>●</span> {group_name}", unsafe_allow_html=True)
+            else:
+                st.markdown(f"#### {group_name}")
             for class_name in classes:
                 color = CLASS_COLORS.get(class_name, "#6c757d")
                 st.markdown(f"""
@@ -448,6 +452,29 @@ class NeuropathologyApp:
         </div>
         """, unsafe_allow_html=True)
         
+        # Option to change model
+        if st.session_state.available_models and len(st.session_state.available_models) > 1:
+            with st.expander("🔄 Change Model"):
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    selected_model = st.selectbox(
+                        "Select a different model:",
+                        st.session_state.available_models,
+                        index=st.session_state.available_models.index(st.session_state.get('loaded_model_name', st.session_state.available_models[0])) if st.session_state.get('loaded_model_name') in st.session_state.available_models else 0,
+                        key="change_model_select",
+                        help="Choose from available trained models in the models/ directory"
+                    )
+                with col2:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("🚀 Load Selected", key="change_model_button", use_container_width=True):
+                        with st.spinner(f"Loading {selected_model}..."):
+                            if self._load_model(selected_model):
+                                st.success(f"✅ Model '{selected_model}' loaded successfully!")
+                                # Clear analysis results when changing models
+                                if 'analysis_results' in st.session_state:
+                                    del st.session_state.analysis_results
+                                st.rerun()
+        
         st.markdown("""
         <div class="info-box">
         Upload a brain MRI image to detect potential pathologies. The system will analyze 
@@ -489,14 +516,16 @@ class NeuropathologyApp:
                 st.error(f"Failed to fetch image from URL: {e}")
 
         if image is not None:
-            # Display uploaded image and predicted diagnosis side by side
+            # Display uploaded image and analysis in two columns
             col1, col2 = st.columns([1, 1])
             
             with col1:
                 st.markdown("### 📷 Uploaded Image")
                 st.image(image, caption=src_label, use_container_width=True)
-                
-                # Image info with mode explanation
+            
+            with col2:
+                # Image info with mode explanation - aligned with top of image
+                st.markdown('<div style="margin-top: 50px;">', unsafe_allow_html=True)
                 mode_desc = {
                     'L': 'Grayscale (8-bit pixels)',
                     'RGB': 'True Color (3×8-bit pixels)',
@@ -506,19 +535,16 @@ class NeuropathologyApp:
                 }.get(image.mode, image.mode)
                 
                 st.markdown(f"""
-                **Image Details:**
-                - Size: {image.size[0]}×{image.size[1]} pixels
-                - Mode: {mode_desc}
-                - Source: {src_label}
-                """)
-            
-            with col2:
-                st.markdown("### 🤖 Analysis")
+                <div class="info-box" style="margin-bottom: 1rem;">
+                <h4>📋 Image Details</h4>
+                <p><strong>Size:</strong> {image.size[0]}×{image.size[1]} pixels</p>
+                <p><strong>Mode:</strong> {mode_desc}</p>
+                <p><strong>Source:</strong> {src_label}</p>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                # Show analyze button if no results yet
+                # Show analyze button or results
                 if 'analysis_results' not in st.session_state:
-                    st.markdown("Click below to start the analysis with the loaded model.")
-                    
                     # Analyze button
                     if st.button("🔬 Analyze Image", key="analyze", use_container_width=True):
                         with st.spinner("Analyzing image with deep learning model..."):
@@ -574,7 +600,7 @@ class NeuropathologyApp:
                         status_text = "Low Confidence"
                     
                     st.markdown(f"""
-                    <div class="diagnosis-box" style="background: linear-gradient(135deg, {class_color}15, {class_color}05); border-left: 5px solid {class_color}; padding: 20px; border-radius: 10px;">
+                    <div class="diagnosis-box" style="background: linear-gradient(135deg, {class_color}15, {class_color}05); border-left: 5px solid {class_color}; padding: 20px; border-radius: 10px; margin-top: 1rem; margin-bottom: 1rem;">
                     <h3>{status_icon} Predicted Diagnosis</h3>
                     <h2 style="color: {class_color};">
                         <span style="font-size: 0.8em;">●</span> {class_name}
@@ -585,9 +611,11 @@ class NeuropathologyApp:
                     """, unsafe_allow_html=True)
                     
                     # Button to re-analyze
-                    if st.button("🔄 Re-analyze", key="reanalyze", use_container_width=True):
+                    if st.button("🔄 Reanalyze", key="reanalyze", use_container_width=True):
                         del st.session_state.analysis_results
                         st.rerun()
+                
+                st.markdown('</div>', unsafe_allow_html=True)
             
             # Display detailed results in full-width section if available
             if 'analysis_results' in st.session_state:
@@ -645,30 +673,67 @@ class NeuropathologyApp:
                 short_name = name
             short_labels.append(short_name)
         
-        # Confidence scores for all classes - responsive visualization
+        # Helper function to darken color for hover
+        def darken_color(hex_color, factor=0.7):
+            """Darken a hex color by a factor."""
+            hex_color = hex_color.lstrip('#')
+            r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            r, g, b = int(r * factor), int(g * factor), int(b * factor)
+            return f'#{r:02x}{g:02x}{b:02x}'
+        
+        # Prepare colors for all bars
+        bar_colors = []
+        hover_colors = []
+        for i, name in enumerate(self.class_names):
+            base_color = CLASS_COLORS.get(name, '#6c757d')
+            bar_colors.append(base_color)
+            hover_colors.append(darken_color(base_color))
+        
+        # Create custom hover template with colored background
+        hover_template = '<b>%{customdata[0]}</b><br>Confidence: %{y:.1%}<extra></extra>'
+        
+        # Confidence scores for all classes - enhanced visualization
         fig = go.Figure(data=[
             go.Bar(
                 x=short_labels,
                 y=predictions,
-                marker_color=[CLASS_COLORS.get(name, '#6c757d') if i == predicted_class else '#e0e0e0' 
-                             for i, name in enumerate(self.class_names)],
-                text=[f'{p*100:.1f}%' for p in predictions],
-                textposition='auto',
-                hovertemplate='<b>%{x}</b><br>Confidence: %{y:.1%}<extra></extra>'
+                marker=dict(
+                    color=bar_colors,
+                    line=dict(color='rgba(0,0,0,0.1)', width=1)
+                ),
+                customdata=[[name] for name in self.class_names],
+                hovertemplate=hover_template,
+                hoverlabel=dict(
+                    bgcolor=[darken_color(CLASS_COLORS.get(name, '#6c757d')) for name in self.class_names],
+                    font=dict(color='white', size=14)
+                ),
+                text=[f'{p*100:.1f}%' if p > 0.05 else '' for p in predictions],
+                textposition='outside',
+                textfont=dict(size=10)
             )
         ])
         
         fig.update_layout(
-            title='Prediction Confidence for All Classes',
+            title=dict(
+                text='Prediction Confidence for All Classes',
+                font=dict(size=18, color='#333')
+            ),
             xaxis_title='Pathology Type',
             yaxis_title='Confidence Score',
-            yaxis=dict(range=[0, 1], tickformat='.0%'),
-            height=500,
-            hovermode='x unified',
-            xaxis={'tickangle': -45}
+            yaxis=dict(range=[0, max(predictions) * 1.15], tickformat='.0%'),
+            height=550,
+            hovermode='closest',
+            xaxis=dict(tickangle=-45, tickfont=dict(size=10)),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            margin=dict(t=80, b=120, l=60, r=40),
+            showlegend=False
         )
         
-        st.plotly_chart(fig, use_container_width=True, key="confidence_chart")
+        # Add grid lines for better readability
+        fig.update_yaxis(showgrid=True, gridwidth=1, gridcolor='rgba(200,200,200,0.3)')
+        
+        st.plotly_chart(fig, use_container_width=True, key="confidence_chart", config={'displayModeBar': True, 'toImageButtonOptions': {'format': 'png', 'filename': 'neuropathology_prediction', 'height': 800, 'width': 1400, 'scale': 2}})
         
         # Class description and characteristic MRI findings
         st.markdown("### 📖 About This Condition")
@@ -685,7 +750,7 @@ class NeuropathologyApp:
         </div>
         """, unsafe_allow_html=True)
         
-        # All class probabilities - sorted and styled
+        # All class probabilities - sorted and styled with color coding
         st.markdown("### 📋 All Class Probabilities")
         
         # Create sorted list of (name, probability, color) tuples
@@ -697,7 +762,7 @@ class NeuropathologyApp:
         st.markdown("**Top 5 Predictions:**")
         for i, (name, prob, color) in enumerate(prob_data_sorted[:5], 1):
             st.markdown(f"""
-            <div style="margin-bottom: 12px; padding: 10px; background: linear-gradient(90deg, {color}20 0%, {color}05 100%); border-radius: 8px; border-left: 4px solid {color};">
+            <div style="margin-bottom: 12px; padding: 12px; background: linear-gradient(90deg, {color}20 0%, {color}05 100%); border-radius: 8px; border-left: 4px solid {color};">
                 <span style="font-weight: 600; color: {color};">#{i}</span> 
                 <span style="color: {color}; font-size: 1.1em;">●</span> 
                 <strong>{name}</strong>: {prob*100:.2f}%
@@ -710,8 +775,8 @@ class NeuropathologyApp:
             with st.expander(f"📊 View all {len(prob_data_sorted)} class probabilities"):
                 for i, (name, prob, color) in enumerate(prob_data_sorted[5:], 6):
                     st.markdown(f"""
-                    <div style="margin-bottom: 8px;">
-                        <span style="color: {color}; font-size: 1.1em;">●</span> 
+                    <div style="margin-bottom: 10px; padding: 10px; background: linear-gradient(90deg, {color}15 0%, {color}03 100%); border-radius: 6px; border-left: 3px solid {color};">
+                        <span style="color: {color}; font-size: 1.0em;">●</span> 
                         <strong>{name}</strong>: {prob*100:.2f}%
                     </div>
                     """, unsafe_allow_html=True)
