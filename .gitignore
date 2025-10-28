@@ -34,8 +34,8 @@ env/
 *~
 
 # Data
-data/
-datasets/
+/data/
+/datasets/
 !data/.gitkeep
 *.nii
 *.nii.gz
