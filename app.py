@@ -32,7 +32,7 @@ from src.utils.helpers import (
 
 # Page configuration
 st.set_page_config(
-    page_title="Neuropathology Detection System",
+    page_title="NeuroPath AI Diagnostics",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -45,13 +45,13 @@ st.markdown("""
         font-size: 3rem;
         font-weight: bold;
         text-align: center;
-        background: linear-gradient(135deg, #c2185b 0%, #7b1fa2 100%);
+        background: linear-gradient(135deg, #a01548 0%, #6a1a82 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 1rem;
     }
     .sub-header {
-        font-size: 1.35rem;
+        font-size: 1.5rem;
         color: #666;
         text-align: center;
         margin-bottom: 2rem;
@@ -231,9 +231,11 @@ class NeuropathologyApp:
         # Header with plain emoji (no gradient applied to emoji)
         st.markdown("""
         <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🧠</div>
-            <h1 class="main-header">Neuropathology Detection System</h1>
-            <p class="sub-header">AI-Powered Brain MRI Analysis Using Deep Learning</p>
+            <h1 style="font-size: 3rem; font-weight: bold; margin-bottom: 1rem;">
+                <span style="font-size: 3.5rem;">🧠</span>
+                <span class="main-header" style="display: inline;">NeuroPath AI Diagnostics</span>
+            </h1>
+            <p class="sub-header">Deep Learning Powered MRI Image Analysis</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -283,11 +285,11 @@ class NeuropathologyApp:
     def render_home(self):
         """Render the home page."""
         st.markdown("""
-        <div class=\"info-box\">
+        <div class=\"info-box\" style="text-align: center;">
         <h3>🎯 Project Overview</h3>
         <p>
         This neuropathology detection system uses deep learning techniques to analyze 
-        brain MRI scans and identify various pathological conditions across multiple 
+        brain MRI scans and identify various tumour classes across multiple 
         imaging modalities (T1, T1C+, T2).
         </p>
         </div>
@@ -336,7 +338,7 @@ class NeuropathologyApp:
 
     def render_diagnosis_classes(self):
         """Render the diagnosis classes page with color-coded bullets."""
-        st.markdown("## � Diagnosis Classes")
+        st.markdown("## 🏥 Diagnosis Classes")
 
         st.markdown("""
         <div class=\"info-box\">
