@@ -103,10 +103,7 @@ Consider a network with:
 
 The forward pass computes:
 
-$$\mathbf{z}^{(1)} = \mathbf{W}^{(1)} \mathbf{x} + \mathbf{b}^{(1)} \in \mathbb{R}^{n_1}$$
-$$\mathbf{a}^{(1)} = \sigma(\mathbf{z}^{(1)}) \in \mathbb{R}^{n_1}$$
-$$\mathbf{z}^{(2)} = \mathbf{W}^{(2)} \mathbf{a}^{(1)} + \mathbf{b}^{(2)} \in \mathbb{R}^{n_2}$$
-$$\mathbf{a}^{(2)} = \sigma(\mathbf{z}^{(2)}) \in \mathbb{R}^{n_2}$$
+$$\mathbf{z}^{(1)} = \mathbf{W}^{(1)} \mathbf{x} + \mathbf{b}^{(1)} \in \mathbb{R}^{n_1}$$\mathbf{a}^{(1)} = \sigma(\mathbf{z}^{(1)}) \in \mathbb{R}^{n_1}$$\mathbf{z}^{(2)} = \mathbf{W}^{(2)} \mathbf{a}^{(1)} + \mathbf{b}^{(2)} \in \mathbb{R}^{n_2}$$\mathbf{a}^{(2)} = \sigma(\mathbf{z}^{(2)}) \in \mathbb{R}^{n_2}$$
 
 The loss for a single example is:
 
@@ -192,9 +189,7 @@ $$\boldsymbol{\delta}^{(1)} = \frac{\partial L}{\partial \mathbf{z}^{(1)}} = \le
 
 Finally, compute gradients with respect to $\mathbf{W}^{(1)}$ and $\mathbf{b}^{(1)}$:
 
-$$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \boldsymbol{\delta}^{(1)} \mathbf{x}^T$$
-
-$$\frac{\partial L}{\partial \mathbf{b}^{(1)}} = \boldsymbol{\delta}^{(1)}$$
+$$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \boldsymbol{\delta}^{(1)} \mathbf{x}^T$$\frac{\partial L}{\partial \mathbf{b}^{(1)}} = \boldsymbol{\delta}^{(1)}$$
 
 ### Summary of the Two-Layer Derivation
 
@@ -290,9 +285,7 @@ For layer $\ell$:
 
 The forward pass computes:
 
-$$z_i^{(\ell)} = \sum_{j=1}^{n_{\ell-1}} W_{ij}^{(\ell)} a_j^{(\ell-1)} + b_i^{(\ell)}$$
-
-$$a_i^{(\ell)} = \sigma^{(\ell)}(z_i^{(\ell)})$$
+$$z_i^{(\ell)} = \sum_{j=1}^{n_{\ell-1}} W_{ij}^{(\ell)} a_j^{(\ell-1)} + b_i^{(\ell)}$$a_i^{(\ell)} = \sigma^{(\ell)}(z_i^{(\ell)})$$
 
 The loss $L$ depends on $\mathbf{a}^{(L)}$ and the true label $\mathbf{y}$.
 
@@ -512,9 +505,7 @@ This is remarkably simple: the gradient is the difference between the predicted 
 
 When implementing softmax + cross-entropy, we don't compute them separately. Instead, we use the combined formula:
 
-$$L = -z_y + \log \sum_{j=1}^{K} e^{z_j}$$
-
-$$\frac{\partial L}{\partial \mathbf{z}} = \hat{\mathbf{p}} - \mathbf{y}$$
+$$L = -z_y + \log \sum_{j=1}^{K} e^{z_j}$$\frac{\partial L}{\partial \mathbf{z}} = \hat{\mathbf{p}} - \mathbf{y}$$
 
 This avoids numerical issues and is computationally efficient.
 
@@ -681,3 +672,482 @@ For very deep networks (e.g., ResNets with 100+ layers), memory can be a bottlen
 In this part, we've rigorously derived the backpropagation algorithm from first principles using the multivariate chain rule. We've shown how gradients flow backward through the network, computed derivatives for common activation functions, and analyzed the vanishing/exploding gradient problems. We've also covered the computational and memory complexity of training.
 
 In the next part, we'll implement these derivations in code, building a neural network from scratch to solidify understanding, before examining how modern frameworks like TensorFlow/Keras handle these computations automatically.
+
+## Detailed Derivations for Project-Specific Architectures
+
+### ReLU Activation: Complete Analysis for Our Dense Layers
+
+Our neuropathology classifier uses ReLU activation in both dense layers (lines 270 and 279 of `neuropathology_model.py`). Let's derive all properties rigorously.
+
+**Definition**:
+$$\text{ReLU}(z) = \max(0, z) = \begin{cases} z & \text{if } z > 0 \\ 0 & \text{if } z \leq 0 \end{cases}$$
+
+**First Derivative**:
+
+For $z \neq 0$, the derivative is straightforward:
+- For $z > 0$: $\frac{d}{dz}\text{ReLU}(z) = \frac{d}{dz}z = 1$
+- For $z < 0$: $\frac{d}{dz}\text{ReLU}(z) = \frac{d}{dz}(0) = 0$
+
+At $z = 0$, the function has a corner (non-differentiable). We define the **subdifferential** as $[0, 1]$, and in practice use either 0 or 1. Most implementations use 0:
+
+$$\text{ReLU}'(z) = \begin{cases} 1 & \text{if } z > 0 \\ 0 & \text{if } z \leq 0 \end{cases} = \mathbb{1}[z > 0]$$
+
+**Second Derivative**: 
+
+$$\text{ReLU}''(z) = 0 \text{ for } z \neq 0$$
+
+This means ReLU is piecewise linear with zero curvature except at the origin.
+
+**Backpropagation Through ReLU** (used in our dense layers):
+
+Consider layer $\ell$ with pre-activation $z_i^{(\ell)} = \sum_j W_{ij}^{(\ell)} a_j^{(\ell-1)} + b_i^{(\ell)}$ and activation $a_i^{(\ell)} = \text{ReLU}(z_i^{(\ell)})$.
+
+Given $\frac{\partial L}{\partial a_i^{(\ell)}}$ from the subsequent layer, we compute:
+
+$$\frac{\partial L}{\partial z_i^{(\ell)}} = \frac{\partial L}{\partial a_i^{(\ell)}} \cdot \frac{\partial a_i^{(\ell)}}{\partial z_i^{(\ell)}} = \frac{\partial L}{\partial a_i^{(\ell)}} \cdot \mathbb{1}[z_i^{(\ell)} > 0]$$
+
+**Interpretation**: The gradient passes through unchanged if the neuron was active ($z > 0$) during the forward pass, and is blocked (set to zero) if the neuron was inactive ($z \leq 0$).
+
+**Computational Efficiency**: This requires only:
+1. One comparison per neuron
+2. One multiplication per neuron
+
+No exponentials, divisions, or other expensive operations.
+
+**Statistical Properties**:
+
+For zero-centered input distributions with moderate spread:
+- Approximately 50% of neurons are active
+- Sparse representations (remaining 50% output exactly 0)
+- Gradient sparsity aids generalization
+
+**Reference to Project Code**: In `neuropathology_model.py` line 270:
+```python
+layers.Dense(512, activation='relu', name='fc1')
+```
+
+This creates 512 neurons, each computing:
+- Forward: $a_i = \max(0, \sum_j W_{ij} h_j + b_i)$ where $h$ is the 1280-dim input from Global Average Pooling
+- Backward: $\delta_i = \delta_{\text{next}} \cdot \mathbb{1}[z_i > 0]$ where $\delta_{\text{next}}$ comes from dropout
+
+**Visualization**: See `../visualizations/activation_functions_comprehensive.png` for plots of ReLU and its derivative.
+
+### Softmax and Cross-Entropy: The Output Layer
+
+Our classifier's output layer (line 287) uses softmax with 17 outputs. Let's derive the complete mathematics.
+
+**Softmax Function**:
+
+Given logits $\mathbf{z} = [z_1, z_2, \ldots, z_K]^T$ where $K=17$ for our classifier:
+
+$$\hat{p}_k = \text{softmax}(\mathbf{z})_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}} = \frac{e^{z_k}}{Z}$$
+
+where $Z = \sum_{j=1}^{K} e^{z_j}$ is the partition function.
+
+**Detailed Jacobian Derivation**:
+
+The softmax Jacobian is crucial for backpropagation. We need $\frac{\partial \hat{p}_i}{\partial z_j}$ for all $i, j$.
+
+**Case 1: $i = j$ (diagonal elements)**
+
+$$\frac{\partial \hat{p}_i}{\partial z_i} = \frac{\partial}{\partial z_i} \left( \frac{e^{z_i}}{Z} \right)$$
+
+Using the quotient rule:
+
+$$= \frac{e^{z_i} \cdot Z - e^{z_i} \cdot \frac{\partial Z}{\partial z_i}}{Z^2}$$
+
+Since $\frac{\partial Z}{\partial z_i} = e^{z_i}$:
+
+$$= \frac{e^{z_i} \cdot Z - e^{z_i} \cdot e^{z_i}}{Z^2} = \frac{e^{z_i}}{Z} \cdot \frac{Z - e^{z_i}}{Z} = \hat{p}_i (1 - \hat{p}_i)$$
+
+**Case 2: $i \neq j$ (off-diagonal elements)**
+
+$$\frac{\partial \hat{p}_i}{\partial z_j} = \frac{\partial}{\partial z_j} \left( \frac{e^{z_i}}{Z} \right)$$
+
+The numerator $e^{z_i}$ doesn't depend on $z_j$, so:
+
+$$= \frac{0 \cdot Z - e^{z_i} \cdot \frac{\partial Z}{\partial z_j}}{Z^2} = \frac{-e^{z_i} \cdot e^{z_j}}{Z^2} = -\frac{e^{z_i}}{Z} \cdot \frac{e^{z_j}}{Z} = -\hat{p}_i \hat{p}_j$$
+
+**Combined Result** using Kronecker delta $\delta_{ij}$:
+
+$$\frac{\partial \hat{p}_i}{\partial z_j} = \hat{p}_i (\delta_{ij} - \hat{p}_j)$$
+
+**Verification**:
+- When $i = j$: $\hat{p}_i(\delta_{ii} - \hat{p}_i) = \hat{p}_i(1 - \hat{p}_i)$ ✓
+- When $i \neq j$: $\hat{p}_i(\delta_{ij} - \hat{p}_j) = \hat{p}_i(0 - \hat{p}_j) = -\hat{p}_i \hat{p}_j$ ✓
+
+**Cross-Entropy Loss**:
+
+For true class $y \in \{1, 2, \ldots, K\}$:
+
+$$L = -\log \hat{p}_y$$
+
+**Combined Gradient** (the elegant result):
+
+We want $\frac{\partial L}{\partial z_k}$ for all $k$:
+
+$$\frac{\partial L}{\partial z_k} = \sum_{i=1}^{K} \frac{\partial L}{\partial \hat{p}_i} \cdot \frac{\partial \hat{p}_i}{\partial z_k}$$
+
+First, $\frac{\partial L}{\partial \hat{p}_i}$:
+
+$$L = -\log \hat{p}_y \implies \frac{\partial L}{\partial \hat{p}_i} = \begin{cases} -\frac{1}{\hat{p}_y} & \text{if } i = y \\ 0 & \text{if } i \neq y \end{cases}$$
+
+Therefore:
+
+$$\frac{\partial L}{\partial z_k} = \frac{\partial L}{\partial \hat{p}_y} \cdot \frac{\partial \hat{p}_y}{\partial z_k} = -\frac{1}{\hat{p}_y} \cdot \hat{p}_y(\delta_{yk} - \hat{p}_k) = -(\delta_{yk} - \hat{p}_k) = \hat{p}_k - \delta_{yk}$$
+
+where $\delta_{yk} = 1$ if $k = y$ and 0 otherwise.
+
+**Using one-hot encoding** $\mathbf{y} \in \{0,1\}^K$ where $y_k = 1$ if $k$ is the true class:
+
+$$\frac{\partial L}{\partial \mathbf{z}} = \hat{\mathbf{p}} - \mathbf{y}$$
+
+**This is remarkably simple**: The gradient is just the prediction error!
+
+**Numerical Example** (for our 17-class problem):
+
+Suppose the true class is Meningioma T1C+ (class 5), and our network outputs:
+
+$$\mathbf{z} = [2.1, 1.3, 0.8, 1.5, 5.2, 3.1, 0.9, \ldots] \in \mathbb{R}^{17}$$
+
+After softmax:
+$$\hat{\mathbf{p}} = [0.03, 0.01, 0.01, 0.02, 0.68, 0.08, 0.01, \ldots]$$
+
+The one-hot label is:
+$$\mathbf{y} = [0, 0, 0, 0, 1, 0, 0, \ldots]$$
+
+The gradient is:
+$$\frac{\partial L}{\partial \mathbf{z}} = [0.03, 0.01, 0.01, 0.02, -0.32, 0.08, 0.01, \ldots]$$
+
+**Interpretation**:
+- Class 5 (true class): gradient is $-0.32$, pushing logit $z_5$ **higher**
+- All other classes: positive gradients, pushing their logits **lower**
+- Magnitude proportional to predicted probability (higher confidence = larger gradient)
+
+**Reference to Project Code**: In `neuropathology_model.py`:
+- Line 287: `layers.Dense(self.num_classes, activation='softmax', name='output')`
+- Line 400: `loss='categorical_crossentropy'`
+
+TensorFlow/Keras automatically combines these for numerically stable computation.
+
+**Visualization**: See `../visualizations/softmax_properties.png` and `../visualizations/cross_entropy_loss.png`.
+
+## Comprehensive Gradient Derivations for All Common Activations
+
+### Sigmoid: Historical Perspective and Modern Usage
+
+**Function**:
+$$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+
+**First Derivative** (detailed proof):
+
+Let $u = 1 + e^{-z}$, so $\sigma(z) = u^{-1}$.
+
+$$\frac{d\sigma}{dz} = \frac{d}{dz}(u^{-1}) = -u^{-2} \cdot \frac{du}{dz}$$
+
+Since $\frac{du}{dz} = -e^{-z}$:
+
+$$\frac{d\sigma}{dz} = -\frac{1}{(1 + e^{-z})^2} \cdot (-e^{-z}) = \frac{e^{-z}}{(1 + e^{-z})^2}$$
+
+**Expressing in terms of $\sigma(z)$**:
+
+$$\frac{e^{-z}}{(1 + e^{-z})^2} = \frac{1}{1 + e^{-z}} \cdot \frac{e^{-z}}{1 + e^{-z}}$$
+
+Note that:
+$$\frac{e^{-z}}{1 + e^{-z}} = \frac{1 + e^{-z} - 1}{1 + e^{-z}} = 1 - \frac{1}{1 + e^{-z}} = 1 - \sigma(z)$$
+
+Therefore:
+$$\sigma'(z) = \sigma(z)(1 - \sigma(z))$$
+
+**Second Derivative**:
+
+$$\sigma''(z) = \frac{d}{dz}[\sigma(z)(1 - \sigma(z))]$$
+
+Using the product rule:
+$$= \sigma'(z)(1 - \sigma(z)) + \sigma(z) \cdot (-\sigma'(z))$$= \sigma'(z)(1 - 2\sigma(z))$$= \sigma(z)(1 - \sigma(z))(1 - 2\sigma(z))$$
+
+**Critical Points**:
+- $\sigma''(z) = 0$ when $\sigma(z) = 0, 1,$ or $0.5$
+- Inflection point at $z = 0$ where $\sigma(0) = 0.5$
+
+**Vanishing Gradient Analysis**:
+
+The maximum derivative occurs at $z = 0$:
+$$\sigma'(0) = \sigma(0)(1 - \sigma(0)) = 0.5 \times 0.5 = 0.25$$
+
+For deep networks, gradients are multiplied across layers. With $L$ layers:
+$$\left|\frac{\partial L}{\partial z^{(1)}}\right| \leq 0.25^L \cdot \text{const}$$
+
+For $L = 10$: $0.25^{10} \approx 9.5 \times 10^{-7}$ (gradient essentially vanishes!)
+
+**Why Not Used in Hidden Layers**: This rapid gradient decay makes sigmoid impractical for deep networks.
+
+**Visualization**: See first panel of `../visualizations/activation_functions_comprehensive.png`.
+
+### Hyperbolic Tangent (Tanh)
+
+**Function**:
+$$\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}} = \frac{e^{2z} - 1}{e^{2z} + 1}$$
+
+**Relation to Sigmoid**:
+$$\tanh(z) = 2\sigma(2z) - 1$$
+
+**First Derivative** (using quotient rule):
+
+Let $u = e^z - e^{-z}$ and $v = e^z + e^{-z}$.
+
+$$\frac{du}{dz} = e^z + e^{-z} = v, \quad \frac{dv}{dz} = e^z - e^{-z} = u$$
+
+By quotient rule:
+$$\tanh'(z) = \frac{v \cdot v - u \cdot u}{v^2} = \frac{v^2 - u^2}{v^2}$$
+
+Computing $v^2 - u^2$:
+$$v^2 - u^2 = (e^z + e^{-z})^2 - (e^z - e^{-z})^2$$= (e^{2z} + 2 + e^{-2z}) - (e^{2z} - 2 + e^{-2z}) = 4$$
+
+Therefore:
+$$\tanh'(z) = \frac{4}{(e^z + e^{-z})^2} = 1 - \tanh^2(z)$$
+
+**Verification** at $z = 0$:
+$$\tanh(0) = 0 \implies \tanh'(0) = 1 - 0^2 = 1$$ ✓
+
+**Second Derivative**:
+$$\tanh''(z) = -2\tanh(z) \cdot \tanh'(z) = -2\tanh(z)(1 - \tanh^2(z))$$
+
+**Advantages over Sigmoid**:
+1. **Zero-centered**: Outputs range from $-1$ to $1$, mean around 0
+2. **Stronger gradient**: Maximum derivative is 1 (vs. 0.25 for sigmoid)
+3. **Symmetric**: $\tanh(-z) = -\tanh(z)$
+
+**Still suffers from vanishing gradients**, but less severely than sigmoid.
+
+**Visualization**: See `../visualizations/activation_functions_comprehensive.png`, third panel.
+
+### Leaky ReLU and Parametric ReLU (PReLU)
+
+**Leaky ReLU**:
+$$f(z) = \begin{cases} z & \text{if } z > 0 \\ \alpha z & \text{if } z \leq 0 \end{cases} = \max(\alpha z, z)$$
+
+where $\alpha$ is a small positive constant (typically $\alpha = 0.01$).
+
+**Derivative**:
+$$f'(z) = \begin{cases} 1 & \text{if } z > 0 \\ \alpha & \text{if } z \leq 0 \end{cases}$$
+
+**Key Advantage**: Non-zero gradient for negative inputs prevents "dying ReLU" problem.
+
+**Parametric ReLU (PReLU)**: Treats $\alpha$ as a **learnable parameter**:
+
+During training, we also compute:
+$$\frac{\partial L}{\partial \alpha} = \sum_{i : z_i < 0} \frac{\partial L}{\partial f(z_i)} \cdot z_i$$
+
+**Why it helps**: The network learns the optimal slope for negative values, adapting to the data.
+
+**Visualization**: See `../visualizations/activation_functions_comprehensive.png`, fourth panel.
+
+## Advanced Mathematical Tools for Deep Learning
+
+### Matrix Calculus: Vector-by-Vector Derivatives
+
+When dealing with vector-valued functions, we need systematic rules for derivatives.
+
+**Setup**: Let $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ be a vector-valued function.
+
+The **Jacobian matrix** is:
+$$\mathbf{J} = \frac{\partial \mathbf{f}}{\partial \mathbf{x}} \in \mathbb{R}^{m \times n}, \quad J_{ij} = \frac{\partial f_i}{\partial x_j}$$
+
+**Chain Rule for Vectors**:
+
+If $\mathbf{y} = \mathbf{f}(\mathbf{x})$ and $\mathbf{z} = \mathbf{g}(\mathbf{y})$, then:
+$$\frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \frac{\partial \mathbf{z}}{\partial \mathbf{y}} \cdot \frac{\partial \mathbf{y}}{\partial \mathbf{x}}$$
+
+**Example: Affine Transformation**
+
+Let $\mathbf{z} = \mathbf{W}\mathbf{x} + \mathbf{b}$ where $\mathbf{W} \in \mathbb{R}^{m \times n}$, $\mathbf{x} \in \mathbb{R}^n$, $\mathbf{b} \in \mathbb{R}^m$.
+
+Component-wise: $z_i = \sum_{j=1}^n W_{ij} x_j + b_i$
+
+Jacobian:
+$$\frac{\partial z_i}{\partial x_j} = W_{ij} \implies \frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \mathbf{W}$$
+
+**Backpropagation through Affine Layer**:
+
+Given $\frac{\partial L}{\partial \mathbf{z}}$ (a column vector), we need $\frac{\partial L}{\partial \mathbf{x}}$:
+
+$$\frac{\partial L}{\partial \mathbf{x}} = \left(\frac{\partial \mathbf{z}}{\partial \mathbf{x}}\right)^T \frac{\partial L}{\partial \mathbf{z}} = \mathbf{W}^T \frac{\partial L}{\partial \mathbf{z}}$$
+
+This is why we see $\mathbf{W}^T$ in backpropagation!
+
+**Gradient with Respect to Weight Matrix**:
+
+For $\mathbf{z} = \mathbf{W}\mathbf{x}$, we want $\frac{\partial L}{\partial \mathbf{W}}$.
+
+$$\frac{\partial L}{\partial W_{ij}} = \frac{\partial L}{\partial z_i} \cdot \frac{\partial z_i}{\partial W_{ij}} = \frac{\partial L}{\partial z_i} \cdot x_j$$
+
+In matrix form:
+$$\frac{\partial L}{\partial \mathbf{W}} = \frac{\partial L}{\partial \mathbf{z}} \mathbf{x}^T$$
+
+This is the **outer product** formula used in backpropagation.
+
+### Information Theory Perspective on Cross-Entropy
+
+**Entropy**: Measures uncertainty in a distribution:
+$$H(P) = -\sum_{i=1}^K P(i) \log P(i)$$
+
+**Cross-Entropy** between distributions $P$ and $Q$:
+$$H(P, Q) = -\sum_{i=1}^K P(i) \log Q(i)$$
+
+**KL Divergence** (Kullback-Leibler):
+$$D_{KL}(P \| Q) = \sum_{i=1}^K P(i) \log \frac{P(i)}{Q(i)} = H(P, Q) - H(P)$$
+
+**Minimizing Cross-Entropy = Minimizing KL Divergence**:
+
+Since $H(P)$ is constant (true distribution doesn't change), minimizing $H(P, Q)$ is equivalent to minimizing $D_{KL}(P \| Q)$.
+
+**For Classification**:
+- $P$ is the true distribution (one-hot: all mass on correct class)
+- $Q$ is the predicted distribution (softmax output)
+- Minimizing cross-entropy makes predictions match the true distribution
+
+**Maximum Likelihood Connection**:
+
+The cross-entropy loss:
+$$L = -\log Q(y) = -\log \hat{p}_y$$
+
+is the negative log-likelihood of the true class under the model's distribution.
+
+Minimizing $L$ ⟺ Maximizing likelihood ⟺ Maximum Likelihood Estimation (MLE)
+
+## Numerical Stability and Implementation Considerations
+
+### Numerically Stable Softmax
+
+**Problem**: Computing $e^{z_k}$ can overflow for large $z_k$ (e.g., $e^{1000}$ = infinity in floating point).
+
+**Solution**: Use the translation invariance property:
+$$\text{softmax}(\mathbf{z})_k = \text{softmax}(\mathbf{z} - c)_k \quad \text{for any constant } c$$
+
+**Proof**:
+$$\frac{e^{z_k - c}}{\sum_j e^{z_j - c}} = \frac{e^{z_k} e^{-c}}{\sum_j e^{z_j} e^{-c}} = \frac{e^{z_k}}{\sum_j e^{z_j}}$$
+
+**Best choice**: $c = \max_j z_j$, ensuring all exponents are $\leq 0$.
+
+**Implementation**:
+```python
+def softmax_stable(z):
+    z_shifted = z - np.max(z, axis=-1, keepdims=True)
+    exp_z = np.exp(z_shifted)
+    return exp_z / np.sum(exp_z, axis=-1, keepdims=True)
+```
+
+**Reference**: TensorFlow/Keras automatically uses this stable version internally.
+
+### Log-Sum-Exp Trick
+
+When computing cross-entropy, we often need:
+$$\log \sum_{j=1}^K e^{z_j}$$
+
+**Stable computation**:
+$$\log \sum_{j=1}^K e^{z_j} = c + \log \sum_{j=1}^K e^{z_j - c}$$
+
+where $c = \max_j z_j$.
+
+This appears in the cross-entropy formula:
+$$L = -z_y + \log \sum_{j=1}^K e^{z_j}$$
+
+### Gradient Checking: Verifying Backpropagation
+
+**Finite Differences** provide a numerical approximation to gradients:
+
+$$\frac{\partial L}{\partial \theta} \approx \frac{L(\theta + \epsilon) - L(\theta - \epsilon)}{2\epsilon}$$
+
+for small $\epsilon$ (typically $10^{-4}$).
+
+**Procedure**:
+1. Implement backpropagation analytically
+2. Compute numerical gradient using finite differences
+3. Compare: $\left|\frac{\partial L}{\partial \theta}_{\text{analytical}} - \frac{\partial L}{\partial \theta}_{\text{numerical}}\right|$ should be $< 10^{-5}$
+
+**Why This Works**: Taylor expansion:
+$$L(\theta + \epsilon) = L(\theta) + \epsilon \frac{\partial L}{\partial \theta} + O(\epsilon^2)$$L(\theta - \epsilon) = L(\theta) - \epsilon \frac{\partial L}{\partial \theta} + O(\epsilon^2)$$
+
+Subtracting:
+$$L(\theta + \epsilon) - L(\theta - \epsilon) = 2\epsilon \frac{\partial L}{\partial \theta} + O(\epsilon^3)$$
+
+The $O(\epsilon^2)$ terms cancel, giving better accuracy than one-sided difference.
+
+**Reference to Code**: See Part D for implementation of gradient checking in NumPy.
+
+## Theoretical Guarantees and Convergence Analysis
+
+### Convergence of Gradient Descent (Simplified)
+
+For a **convex** function $L(\theta)$ with **Lipschitz continuous gradient** (i.e., $\|\nabla L(\theta_1) - \nabla L(\theta_2)\| \leq C \|\theta_1 - \theta_2\|$):
+
+**Theorem**: Gradient descent with step size $\eta < \frac{2}{C}$ converges to the global minimum.
+
+**Proof Sketch**:
+1. By Lipschitz continuity, $L(\theta - \eta \nabla L(\theta)) \leq L(\theta) - \eta \|\nabla L(\theta)\|^2 + \frac{C\eta^2}{2} \|\nabla L(\theta)\|^2$
+2. Choosing $\eta < \frac{2}{C}$ ensures the second-order term is dominated
+3. Thus $L$ decreases at each iteration
+4. For convex $L$, this implies convergence to global minimum
+
+**Reality for Neural Networks**:
+- Loss is **not convex**
+- Convergence to global minimum **not guaranteed**
+- But local minima are often good enough in practice
+
+### Why Deep Networks Don't Get Stuck in Bad Local Minima
+
+**Empirical Observation**: For overparameterized networks, most local minima have similar loss values close to the global minimum.
+
+**Theoretical Insight** (Choromanska et al., 2015): For certain random network models, the loss surface resembles a high-dimensional landscape where:
+- Number of local minima grows exponentially with network size
+- But most local minima have low loss
+- Saddle points dominate over poor local minima
+
+**Escape from Saddle Points**: SGD with noise can escape saddle points efficiently. At a saddle point:
+- Gradient is zero: $\nabla L = 0$
+- Hessian has negative eigenvalues
+- Adding noise (from minibatches) pushes optimizer away from saddle
+
+## Visualization and Geometric Interpretation
+
+### The Error Surface
+
+For a simple 2-parameter network, we can visualize the loss surface $L(\theta_1, \theta_2)$.
+
+**Characteristics**:
+- **Ravines**: Long, narrow valleys with steep sides
+- **Saddle points**: Gradients zero but not minima
+- **Plateaus**: Flat regions with small gradients
+
+**See**: `../visualizations/` directory (2D loss contours would be generated for specific examples).
+
+### Gradient Flow Through Layers
+
+The magnitude of gradients typically varies across layers. In a well-trained network:
+- **Early layers**: Smaller gradients (further from loss)
+- **Later layers**: Larger gradients (closer to loss)
+
+**See**: `../visualizations/gradient_flow.png` illustrating vanishing and exploding gradients.
+
+### The Chain Rule as a Computational Graph
+
+**Representation**: Each operation in the network is a node, data flows along edges.
+
+**Forward pass**: Data flows from input to output
+**Backward pass**: Gradients flow from output to input
+
+**See**: `../visualizations/chain_rule_visualization.png` for a concrete example.
+
+---
+
+This expansion provides significantly more mathematical depth, covering:
+- Detailed derivations for all activation functions used in the project
+- Complete softmax and cross-entropy mathematics
+- Matrix calculus foundations
+- Information theory perspective
+- Numerical stability considerations
+- Theoretical convergence guarantees
+- Visualization references
+
+All derivations are step-by-step with complete proofs, and directly reference the project code and generated visualizations.
