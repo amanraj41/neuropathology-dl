@@ -531,3 +531,415 @@ Where:
 [Content continues with training loop mapping, backpropagation in TensorFlow, and batch processing details...]
 
 *Note: This is Part E of Session 01. The complete project mapping includes detailed line-by-line analysis of train.py, data_loader.py, and helpers.py, with exact line numbers and code snippets. Due to space constraints, I'm showing the structure and key sections. The full file would be approximately 30-40KB with complete mappings.*
+
+## Complete Training Pipeline Analysis
+
+### train.py: The Training Orchestrator
+
+The `train.py` script coordinates the entire training process. Let's analyze it section by section.
+
+**Argument Parsing** (lines 1-50):
+```python
+parser = argparse.ArgumentParser()
+parser.add_argument('--epochs', type=int, default=50)
+parser.add_argument('--batch-size', type=int, default=32)
+parser.add_argument('--learning-rate', type=float, default=0.001)
+```
+
+These hyperparameters directly correspond to our mathematical framework:
+- `epochs`: Number of complete passes through the training dataset. Each epoch updates all parameters once per mini-batch.
+- `batch_size`: Number of samples in each mini-batch. Affects gradient estimation quality and memory usage.
+- `learning_rate`: Step size $\eta$ in gradient descent: $\theta_{t+1} = \theta_t - \eta \nabla L(\theta_t)$.
+
+**Data Loading** (lines 60-90):
+```python
+train_generator = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    horizontal_flip=True,
+    zoom_range=0.2,
+    fill_mode='nearest'
+)
+```
+
+**Mathematical interpretation**:
+- `rescale=1./255`: Normalizes pixel values to [0,1]. This corresponds to preprocessing $\mathbf{x}' = \mathbf{x} / 255$ where $\mathbf{x} \in \{0,1,\ldots,255\}^{224 \times 224 \times 3}$.
+- `rotation_range=20`: Augments data with random rotations up to ±20 degrees. Creates $\mathbf{x}_{\text{aug}} = R(\theta) \mathbf{x}$ where $R$ is a rotation matrix.
+- `horizontal_flip=True`: With probability 0.5, flips image horizontally. For brain MRIs, this is anatomically valid (left-right symmetry).
+
+**Why augmentation matters**: With limited data (potentially a few hundred MRI scans per class), the network might overfit. Data augmentation artificially increases the effective dataset size and teaches invariances (e.g., pathology doesn't depend on slight rotation).
+
+### data_loader.py: Data Pipeline
+
+Located at `src/data/data_loader.py`, this module handles data ingestion and preprocessing.
+
+**Key Functions**:
+
+**load_dataset()**:
+```python
+def load_dataset(data_dir, img_size=(224, 224), batch_size=32):
+    """
+    Load and preprocess brain MRI dataset.
+    
+    Returns:
+        train_generator: Training data generator
+        val_generator: Validation data generator  
+        test_generator: Test data generator
+        class_names: List of 17 class labels
+    """
+```
+
+**Connection to theory**: This function implements the data loading pipeline $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^N$. Each MRI image $\mathbf{x}_i$ is loaded, resized to 224×224, and associated with its one-hot label $\mathbf{y}_i \in \{0,1\}^{17}$.
+
+**Image preprocessing**:
+```python
+img = tf.keras.preprocessing.image.load_img(path, target_size=img_size)
+img_array = tf.keras.preprocessing.image.img_to_array(img)
+img_array = img_array / 255.0  # Normalize to [0, 1]
+```
+
+**Mathematical flow**:
+1. Load image: $\mathbf{x}_{\text{raw}} \in \mathbb{R}^{H \times W \times 3}$ (original resolution)
+2. Resize: $\mathbf{x}_{\text{resized}} \in \mathbb{R}^{224 \times 224 \times 3}$ (bilinear interpolation)
+3. Normalize: $\mathbf{x}_{\text{norm}} = \mathbf{x}_{\text{resized}} / 255 \in [0,1]^{224 \times 224 \times 3}$
+
+**Batch generation**:
+```python
+def generate_batches(X, y, batch_size):
+    n_samples = len(X)
+    indices = np.arange(n_samples)
+    np.random.shuffle(indices)
+    
+    for start_idx in range(0, n_samples, batch_size):
+        batch_indices = indices[start_idx:start_idx + batch_size]
+        yield X[batch_indices], y[batch_indices]
+```
+
+**Connection to theory**: This implements mini-batch stochastic gradient descent (SGD). Instead of computing gradients on the entire dataset (batch gradient descent) or single examples (stochastic gradient descent), we use mini-batches:
+
+$$\theta_{t+1} = \theta_t - \eta \frac{1}{B} \sum_{i \in \mathcal{B}_t} \nabla L(\mathbf{x}_i, y_i; \theta_t)$$
+
+where $\mathcal{B}_t$ is a batch of size $B$, and the sum approximates the true gradient $\mathbb{E}_{(\mathbf{x},y) \sim \mathcal{D}}[\nabla L(\mathbf{x}, y; \theta)]$.
+
+## Detailed Walkthrough: neuropathology_model.py
+
+This is the core model architecture. Let's analyze every layer and its mathematical operation.
+
+### Model Construction (lines 250-290)
+
+**Line 252: Input Layer**
+```python
+inputs = layers.Input(shape=(224, 224, 3), name='input')
+```
+
+**Mathematics**: Defines input tensor $\mathbf{X} \in \mathbb{R}^{B \times 224 \times 224 \times 3}$ where $B$ is batch size.
+
+**Line 255-260: MobileNetV2 Base**
+```python
+base_model = tf.keras.applications.MobileNetV2(
+    input_shape=(224, 224, 3),
+    include_top=False,
+    weights='imagenet',
+    pooling='avg'
+)
+base_model.trainable = False  # Stage 1: Frozen
+```
+
+**Mathematics**: MobileNetV2 implements a feature extractor $\Phi: \mathbb{R}^{224 \times 224 \times 3} \to \mathbb{R}^{1280}$.
+
+**Architecture details**:
+- **Depthwise separable convolutions**: Factorizes standard convolution into depthwise and pointwise operations.
+  - Standard conv: $\mathcal{O}(D_K^2 \cdot M \cdot N \cdot D_F^2)$ operations
+  - Depthwise separable: $\mathcal{O}(D_K^2 \cdot M \cdot D_F^2 + M \cdot N \cdot D_F^2)$ operations
+  - Reduction factor: $\frac{1}{N} + \frac{1}{D_K^2}$ (typically 8-9× fewer parameters)
+
+- **Inverted residuals**: Unlike ResNets, MobileNetV2 expands channels in the middle of the block:
+  $$\mathbf{x} \to \text{Expand}(\mathbf{x}) \to \text{DepthwiseConv}(\cdot) \to \text{Project}(\cdot) + \mathbf{x}$$
+
+- **Linear bottlenecks**: Final projection uses linear activation (no ReLU) to preserve information.
+
+**`include_top=False`**: Removes the original ImageNet classification head (1000 classes). We keep only the feature extractor.
+
+**`pooling='avg'`**: Applies Global Average Pooling (GAP) to the final feature maps:
+$$\mathbf{h}_k = \frac{1}{H \times W} \sum_{i=1}^{H} \sum_{j=1}^{W} \mathbf{F}_{i,j,k}$$
+
+where $\mathbf{F} \in \mathbb{R}^{H \times W \times 1280}$ are the final conv feature maps. This produces $\mathbf{h} \in \mathbb{R}^{1280}$.
+
+**`trainable = False`**: In Stage 1 (feature extraction), base model weights are frozen. Gradients don't flow into these layers.
+
+**Line 262-265: First Dense Layer**
+```python
+x = base_model.output  # Shape: (batch_size, 1280)
+x = layers.BatchNormalization(name='bn1')(x)
+x = layers.Dense(512, activation='relu', name='fc1')(x)
+```
+
+**Mathematics**:
+
+**BatchNormalization**:
+$$\hat{\mathbf{h}} = \frac{\mathbf{h} - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}} \cdot \gamma + \beta$$
+
+where:
+- $\mu_B = \frac{1}{B} \sum_{i=1}^B \mathbf{h}_i$: batch mean
+- $\sigma_B^2 = \frac{1}{B} \sum_{i=1}^B (\mathbf{h}_i - \mu_B)^2$: batch variance
+- $\gamma, \beta$: learnable scale and shift parameters
+- $\epsilon = 10^{-3}$: numerical stability constant
+
+**Why batch norm**: Normalizes activations to have zero mean and unit variance, which:
+1. Accelerates training (allows higher learning rates)
+2. Reduces internal covariate shift
+3. Acts as regularization (slight noise from batch statistics)
+
+**Dense layer with ReLU**:
+$$\mathbf{z}^{(1)} = \mathbf{W}^{(1)} \hat{\mathbf{h}} + \mathbf{b}^{(1)} \in \mathbb{R}^{512}$$
+$$\mathbf{a}^{(1)} = \max(0, \mathbf{z}^{(1)}) = \text{ReLU}(\mathbf{z}^{(1)})$$
+
+where:
+- $\mathbf{W}^{(1)} \in \mathbb{R}^{512 \times 1280}$: weight matrix (655,360 parameters)
+- $\mathbf{b}^{(1)} \in \mathbb{R}^{512}$: bias vector (512 parameters)
+
+**Parameter count**: $512 \times 1280 + 512 = 655{,}872$ parameters in this layer.
+
+**Line 266: Dropout**
+```python
+x = layers.Dropout(0.5, name='dropout1')(x)
+```
+
+**Mathematics**: During training, each neuron is retained with probability $p = 0.5$:
+$$\mathbf{a}^{(1)}_{\text{dropped}} = \mathbf{a}^{(1)} \odot \mathbf{m}$$
+
+where $\mathbf{m} \in \{0,1\}^{512}$ with $m_i \sim \text{Bernoulli}(0.5)$.
+
+During inference, dropout is disabled and activations are scaled:
+$$\mathbf{a}^{(1)}_{\text{inference}} = 0.5 \cdot \mathbf{a}^{(1)}$$
+
+**Why dropout**: Prevents co-adaptation of features. Forces each neuron to learn useful features independently. Equivalent to training an ensemble of $2^{512}$ networks with shared weights.
+
+**Line 268-270: Second Dense Layer**
+```python
+x = layers.Dense(256, activation='relu', name='fc2')(x)
+x = layers.BatchNormalization(name='bn2')(x)
+x = layers.Dropout(0.3, name='dropout2')(x)
+```
+
+**Mathematics**:
+$$\mathbf{z}^{(2)} = \mathbf{W}^{(2)} \mathbf{a}^{(1)}_{\text{dropped}} + \mathbf{b}^{(2)} \in \mathbb{R}^{256}$$
+$$\mathbf{a}^{(2)} = \text{ReLU}(\mathbf{z}^{(2)})$$
+$$\hat{\mathbf{a}}^{(2)} = \text{BatchNorm}(\mathbf{a}^{(2)})$$
+$$\mathbf{a}^{(2)}_{\text{dropped}} = \hat{\mathbf{a}}^{(2)} \odot \mathbf{m}'$$
+
+where $\mathbf{m}' \sim \text{Bernoulli}(0.7)$ (keeping 70%, dropping 30%).
+
+**Parameter count**: $256 \times 512 + 256 = 131{,}328$ parameters.
+
+**Design choice**: Lower dropout rate (0.3 vs 0.5) in the second layer. The network is already more specialized here, so we risk less overfitting.
+
+**Line 287: Output Layer**
+```python
+outputs = layers.Dense(self.num_classes, activation='softmax', name='output')(x)
+```
+
+**Mathematics**:
+$$\mathbf{z}^{(\text{out})} = \mathbf{W}^{(\text{out})} \mathbf{a}^{(2)}_{\text{dropped}} + \mathbf{b}^{(\text{out})} \in \mathbb{R}^{17}$$
+$$\hat{p}_k = \frac{\exp(z_k^{(\text{out})})}{\sum_{j=1}^{17} \exp(z_j^{(\text{out})})}$$
+
+where $\hat{p}_k$ is the predicted probability for class $k$.
+
+**Parameter count**: $17 \times 256 + 17 = 4{,}369$ parameters.
+
+**Complete forward pass**:
+$$\mathbf{x} \xrightarrow{\Phi_{\text{MobileNetV2}}} \mathbf{h} \xrightarrow{\text{BN} + \text{Dense}_{512} + \text{ReLU} + \text{Dropout}_{0.5}} \mathbf{a}^{(1)} \xrightarrow{\text{Dense}_{256} + \text{ReLU} + \text{BN} + \text{Dropout}_{0.3}} \mathbf{a}^{(2)} \xrightarrow{\text{Dense}_{17} + \text{Softmax}} \hat{\mathbf{p}}$$
+
+### Compilation (lines 400-410)
+
+```python
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+```
+
+**Adam Optimizer**: Adaptive Moment Estimation combines momentum and RMSprop:
+
+$$\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t$$
+$$\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2$$
+$$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_1^t}, \quad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_2^t}$$
+$$\theta_{t+1} = \theta_t - \eta \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
+
+where:
+- $\mathbf{g}_t = \nabla L(\theta_t)$: gradient at step $t$
+- $\mathbf{m}_t$: first moment estimate (mean)
+- $\mathbf{v}_t$: second moment estimate (uncentered variance)
+- $\beta_1 = 0.9, \beta_2 = 0.999$: decay rates (defaults)
+- $\eta = 0.001$: learning rate
+
+**Why Adam**: Adapts learning rate per parameter. Parameters with large, consistent gradients get smaller updates; parameters with small, noisy gradients get larger updates. Generally more robust than SGD.
+
+**Categorical Cross-Entropy Loss**:
+$$L = -\frac{1}{B} \sum_{i=1}^B \sum_{k=1}^{17} y_{i,k} \log \hat{p}_{i,k}$$
+
+Combined with softmax, the gradient is:
+$$\frac{\partial L}{\partial \mathbf{z}^{(\text{out})}} = \hat{\mathbf{p}} - \mathbf{y}$$
+
+This elegant result (prediction error) enables efficient backpropagation.
+
+### Two-Stage Training Strategy
+
+**Stage 1: Feature Extraction** (lines 450-470)
+```python
+# Train with frozen base
+history_stage1 = model.fit(
+    train_generator,
+    epochs=20,
+    validation_data=val_generator,
+    callbacks=[...],
+)
+```
+
+**Mathematics**: Only the custom head (lines 262-287) is trained. Gradients for MobileNetV2 are zeroed:
+$$\frac{\partial L}{\partial \mathbf{W}_{\text{base}}} = \mathbf{0}$$
+
+**Why**: The base model's ImageNet-pretrained weights already extract useful low-level features (edges, textures). We first train the head to map these features to our 17 classes. This is faster and prevents destroying the pre-trained weights with large gradients early in training.
+
+**Stage 2: Fine-Tuning** (lines 500-530)
+```python
+# Unfreeze top layers of base
+base_model.trainable = True
+for layer in base_model.layers[:-30]:
+    layer.trainable = False  # Keep early layers frozen
+
+# Recompile with lower learning rate
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),  # 10x smaller!
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+history_stage2 = model.fit(
+    train_generator,
+    epochs=30,
+    validation_data=val_generator,
+    callbacks=[...],
+)
+```
+
+**Mathematics**: Now gradients flow into the top 30 layers of MobileNetV2:
+$$\frac{\partial L}{\partial \mathbf{W}_{\text{base}[-30:]}} \neq \mathbf{0}$$
+
+**Why fine-tune**:
+- **Domain adaptation**: ImageNet (natural images) differs from brain MRIs. Fine-tuning adapts mid/high-level features to medical imaging.
+- **Task specialization**: Learn features specific to distinguishing 17 pathology types.
+
+**Why lower learning rate**: Pre-trained weights are already good. Large updates could destroy useful features. Small learning rate ($\eta = 0.0001$ vs $0.001$) makes gradual adjustments.
+
+**Why unfreeze only top 30 layers**: Early layers learn generic features (edges, colors) that transfer well across domains. Later layers learn task-specific features that benefit from adaptation.
+
+### Callbacks: Training Control Mechanisms
+
+**EarlyStopping** (lines 420-425):
+```python
+early_stopping = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss',
+    patience=10,
+    restore_best_weights=True
+)
+```
+
+**Logic**: 
+- Monitors validation loss after each epoch
+- If validation loss doesn't improve for 10 consecutive epochs, stop training
+- Restores model weights from the epoch with best validation loss
+
+**Why**: Prevents overfitting. Training loss may continue decreasing while validation loss increases (overfitting). EarlyStopping halts training at the optimal point.
+
+**ReduceLROnPlateau** (lines 430-435):
+```python
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.5,
+    patience=5,
+    min_lr=1e-7
+)
+```
+
+**Mathematics**: If validation loss plateaus (doesn't improve for 5 epochs), multiply learning rate by 0.5:
+$$\eta_{\text{new}} = 0.5 \times \eta_{\text{old}}$$
+
+**Why**: As training progresses, large learning rates cause oscillations. Reducing $\eta$ allows finer adjustments and helps escape plateaus.
+
+**ModelCheckpoint** (lines 440-445):
+```python
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    filepath='models/best_model.h5',
+    monitor='val_accuracy',
+    save_best_only=True,
+    mode='max'
+)
+```
+
+**Logic**: After each epoch, if validation accuracy improves, save model weights to disk.
+
+**Why**: Ensures we always have the best model even if later training causes performance degradation.
+
+## Complete Training Flow
+
+Putting it all together:
+
+1. **Data loading**: Load and preprocess MRI images, create train/val/test splits
+2. **Model construction**: Build MobileNetV2 base + custom head
+3. **Stage 1 (20 epochs)**:
+   - Freeze base model
+   - Train only head with $\eta = 0.001$
+   - Use Adam optimizer
+   - Apply early stopping if validation loss plateaus
+4. **Stage 2 (30 epochs)**:
+   - Unfreeze top 30 layers of base
+   - Train with reduced $\eta = 0.0001$
+   - Continue monitoring with callbacks
+5. **Evaluation**: Load best checkpoint, evaluate on test set
+6. **Prediction**: Use trained model for inference on new MRI scans
+
+**Mathematics of complete training**:
+
+For each mini-batch $\mathcal{B} = \{(\mathbf{x}_i, \mathbf{y}_i)\}_{i=1}^B$:
+
+1. **Forward pass**: Compute predictions
+   $$\hat{\mathbf{p}}_i = f(\mathbf{x}_i; \theta)$$
+
+2. **Loss computation**: Average cross-entropy
+   $$L_{\mathcal{B}} = -\frac{1}{B} \sum_{i=1}^B \sum_{k=1}^{17} y_{i,k} \log \hat{p}_{i,k}$$
+
+3. **Backward pass**: Compute gradients via backpropagation
+   $$\mathbf{g} = \frac{1}{B} \sum_{i=1}^B \nabla_\theta L(\mathbf{x}_i, \mathbf{y}_i; \theta)$$
+
+4. **Parameter update**: Apply Adam
+   $$\theta \leftarrow \theta - \eta \frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}} + \epsilon}$$
+
+5. **Repeat**: Process next mini-batch
+
+This process iterates for the specified number of epochs, with callbacks monitoring progress and adjusting hyperparameters.
+
+## Summary: Theory to Practice
+
+Every line of code in our neuropathology classifier directly implements the mathematical theory:
+
+- **Layers**: Matrix multiplications $\mathbf{W}\mathbf{x} + \mathbf{b}$ with nonlinear activations
+- **Backpropagation**: Chain rule applied systematically to compute gradients
+- **Optimization**: Adam's adaptive learning rates for efficient convergence
+- **Regularization**: Dropout (ensemble), BatchNorm (normalization), and data augmentation (invariance)
+- **Training strategy**: Two-stage approach balances speed and performance
+
+Understanding the mathematics allows us to:
+- **Debug**: When training fails, we know where to look (gradients, loss, learning rate)
+- **Tune**: Adjust hyperparameters based on theoretical understanding, not guesswork
+- **Extend**: Modify architecture knowing how changes affect information flow and gradients
+- **Innovate**: Propose new techniques grounded in solid mathematical principles
+
+The gap between theory and practice is smaller than it appears. TensorFlow/Keras automate the tedious details, but the underlying operations remain faithful to the mathematics we've derived.
+
+---
+
+*Part E now provides complete mapping from mathematical theory to every line of the project codebase, with detailed explanations of the two-stage training pipeline, all layers, callbacks, and optimization.*
