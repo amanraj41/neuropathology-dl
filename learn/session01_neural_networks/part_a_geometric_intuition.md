@@ -216,3 +216,128 @@ The network learns a mapping from raw pixel intensities to a probability distrib
 This is the power and beauty of deep learning: by composing simple operations (linear transformations and nonlinearities) in a deep hierarchy, we can learn extraordinarily complex functions directly from data, without hand-crafting features or decision rules.
 
 In the next part, we'll formalize these intuitions with precise mathematical definitions, setting the stage for understanding the mechanics of training and inference in neural networks.
+
+## Visualizing Decision Boundaries and Hyperplanes
+
+Understanding neural networks geometrically requires visualizing how they partition input space. Let's examine this across different scenarios.
+
+### Two-Dimensional Decision Boundaries
+
+In the simplest case, a single neuron (perceptron) divides the 2D plane with a line. Consider three scenarios:
+
+**Linearly Separable Data**: When data from two classes can be perfectly separated by a straight line, a single perceptron suffices. The decision boundary $\mathbf{w}^T\mathbf{x} + b = 0$ is the line perpendicular to the weight vector $\mathbf{w}$.
+
+**Non-Linearly Separable (XOR)**: The classic XOR problem demonstrates the limitations of linear classifiers. The four points $(0,0), (0,1), (1,0), (1,1)$ with labels $0, 1, 1, 0$ respectively cannot be separated by any single line. This fundamental limitation motivated the development of multilayer networks.
+
+**Multi-Class Classification**: For more than two classes, we need multiple decision boundaries. Each boundary separates one class from the others, creating regions in the input space.
+
+![Decision Boundaries](../visualizations/decision_boundaries.png)
+
+*Figure: Left - Linearly separable data with decision boundary. Center - XOR problem showing impossibility of linear separation. Right - Multi-class regions formed by multiple boundaries.*
+
+### Hyperplanes in Higher Dimensions
+
+When we move beyond two dimensions, decision boundaries become **hyperplanes**—$(d-1)$-dimensional subspaces in $d$-dimensional space.
+
+For three dimensions, the decision boundary is a plane. For our brain MRI classification problem with 150,528 dimensions, the decision boundary is a 150,527-dimensional hyperplane—impossible to visualize directly, but mathematically well-defined.
+
+![Hyperplane in 3D](../visualizations/hyperplane_3d.png)
+
+*Figure: Left - Points on both sides of a hyperplane in 3D space. Right - Normal vector perpendicular to the hyperplane, determining its orientation.*
+
+The **normal vector** $\mathbf{w}$ is perpendicular to the hyperplane and points in the direction of the positive class. The magnitude $\|\mathbf{w}\|$ affects the margin but not the decision boundary itself (scaling $\mathbf{w}$ by a constant doesn't change the boundary).
+
+### The Curse of Dimensionality
+
+As dimensionality increases, several counterintuitive phenomena emerge:
+
+1. **Volume concentration**: In high dimensions, almost all the volume of a hypersphere concentrates near its surface. For our 150,528-dimensional input space, "most" of the space is far from the origin.
+
+2. **Distance metrics break down**: In high dimensions, the ratio of the distance to the nearest neighbor versus the distance to the farthest neighbor approaches 1. This makes nearest-neighbor methods less effective.
+
+3. **Data sparsity**: With fixed data size, as dimensionality increases, data becomes exponentially sparser. If we want to maintain the same data density in 150,528 dimensions as we had in 2 dimensions, we'd need an astronomical number of samples.
+
+**Why neural networks succeed despite this**: They learn low-dimensional manifolds embedded in the high-dimensional space. Natural images don't fill the entire 150,528-dimensional space uniformly—they lie on a much lower-dimensional manifold (perhaps a few hundred dimensions). Neural networks exploit this structure.
+
+## Multilayer Networks: Building Complex Decision Boundaries
+
+Single neurons create linear boundaries. Multilayer networks create arbitrarily complex, nonlinear boundaries by composing these linear pieces.
+
+### Function Composition Visualized
+
+Consider a simple two-layer network. The first layer applies multiple linear transformations followed by ReLU activations. Each neuron creates a "hinge" in the function. The second layer combines these hinges to approximate complex functions.
+
+![Function Composition](../visualizations/function_composition.png)
+
+*Figure: Top row - Individual hidden layer activations h₁(x) and h₂(x), each creating a linear piece. Bottom left - Combined output y(x) forming a piecewise linear function. Bottom right - All layers together showing how composition creates complexity.*
+
+Each ReLU neuron contributes one "piece" to the piecewise linear function. With $n$ hidden neurons, we can create a function with up to $n+1$ linear pieces. By stacking multiple layers, we can approximate functions of arbitrary complexity.
+
+### Universal Approximation in Practice
+
+The universal approximation theorem guarantees that a single hidden layer with enough neurons can approximate any continuous function. But how many neurons do we need?
+
+![Universal Approximation](../visualizations/universal_approximation.png)
+
+*Figure: Approximating sin(x) with increasing numbers of ReLU neurons. As neurons increase, approximation improves (MSE decreases). With 16 neurons, the approximation is nearly indistinguishable from the target.*
+
+**Key insights**:
+- More neurons = better approximation (lower MSE)
+- Even complex periodic functions can be approximated
+- Trade-off between accuracy and model complexity
+- Deep networks (many layers, moderate width) often more efficient than shallow-wide networks
+
+### Why Depth Matters
+
+While a single hidden layer can theoretically approximate any function, **deep networks** (many layers) are often more efficient:
+
+**Hierarchical composition**: Deep networks build hierarchies of features. In our brain MRI classifier:
+- Early layers (in MobileNetV2): Detect edges, textures
+- Middle layers: Detect tissue boundaries, anatomical structures
+- Late layers: Detect tumor types, pathological patterns
+- Final layers (our custom head): Make classification decisions
+
+**Exponential expressiveness**: With $n$ neurons per layer and $L$ layers, we can represent $O(n^L)$ linear regions, versus $O(n)$ regions with a single layer. Deep networks are exponentially more expressive with respect to depth.
+
+**Biological plausibility**: The human visual cortex has hierarchical structure (V1 → V2 → V4 → IT), suggesting that hierarchical processing is effective for vision tasks.
+
+## Geometric Intuition for Our Brain Tumor Classifier
+
+Let's connect this geometric view to our specific problem:
+
+**Input space**: 224×224×3 = 150,528 dimensions. Each MRI image is a point in this vast space.
+
+**Data manifold**: The space of "natural brain MRI images" forms a lower-dimensional manifold. Not all possible 150,528-dimensional vectors correspond to realistic brain scans.
+
+**Class boundaries**: We need to partition this manifold into 17 regions, one for each pathology type (glioma T1, meningioma T1C+, etc.).
+
+**Network architecture**:
+- **MobileNetV2 base**: Reduces 150,528 dimensions to 1,280 dimensions (output of Global Average Pooling). This projection preserves relevant structure while discarding noise.
+- **Dense layers**: Further reduce dimensionality (1,280 → 512 → 256) while making features more separable.
+- **Output layer**: Projects to 17 dimensions (logits), then softmax converts to probabilities.
+
+**Geometric transformation**: The network learns a sequence of transformations that:
+1. Reduce dimensionality (compression)
+2. Increase class separability (stretch distances between classes)
+3. Maintain within-class similarity (compress within-class variance)
+
+The final 17-dimensional space has clear geometric structure: each class occupies a distinct region, and the distance between regions reflects their similarity (e.g., glioma subtypes might be closer than glioma vs. schwannoma).
+
+## From Geometry to Optimization
+
+Having established the geometric intuition—neural networks as function approximators that partition high-dimensional space—we now understand **what** neural networks do. The remaining question is **how** we find the right parameters (weights and biases) to create these partitions.
+
+This is an optimization problem: adjust billions of parameters to minimize classification errors on training data while generalizing to new data. The solution is gradient descent, which we'll formalize in Parts B and C, and implement in Part D.
+
+The geometric view reveals why this is challenging:
+- **High-dimensional nonconvex optimization**: The loss surface in parameter space has many local minima and saddle points.
+- **No closed-form solution**: Unlike linear regression, we can't solve for optimal parameters analytically.
+- **Stochastic approximations**: We use mini-batch gradient descent to approximate the true gradient.
+
+Despite these challenges, deep learning succeeds remarkably well in practice, suggesting that the geometry of neural network loss surfaces has favorable properties (e.g., most local minima are good, saddle points can be escaped).
+
+---
+
+This geometric intuition provides the foundation for understanding neural networks. In Part B, we'll formalize these concepts with rigorous mathematical definitions. In Part C, we'll derive the backpropagation algorithm that enables efficient gradient computation. And in Part D, we'll implement everything from scratch to solidify understanding.
+
+The key takeaway: **Neural networks are geometric function approximators that learn to partition high-dimensional spaces through iterative optimization of decision boundaries.**
