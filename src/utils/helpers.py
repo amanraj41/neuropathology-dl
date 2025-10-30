@@ -6,7 +6,7 @@ This module provides helper functions for visualization, metrics, and model util
 
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 from typing import List, Dict, Tuple
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix, classification_report
@@ -88,10 +88,10 @@ class Visualizer:
         return fig
     
     @staticmethod
-    def plot_confusion_matrix(y_true: np.ndarray, 
-                            y_pred: np.ndarray,
-                            class_names: List[str],
-                            save_path: str = None) -> None:
+    def plot_confusion_matrix(y_true: np.ndarray,
+                              y_pred: np.ndarray,
+                              class_names: List[str],
+                              save_path: str = None) -> plt.Figure:
         """
         Plot confusion matrix for classification results.
         
@@ -109,19 +109,35 @@ class Visualizer:
         - Helps identify which classes are confused
         """
         cm = confusion_matrix(y_true, y_pred)
-        
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                   xticklabels=class_names,
-                   yticklabels=class_names)
-        plt.title('Confusion Matrix')
-        plt.ylabel('True Label')
-        plt.xlabel('Predicted Label')
-        
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        # Display confusion matrix as heatmap
+        im = ax.imshow(cm, cmap='Blues', interpolation='nearest')
+        fig.colorbar(im, ax=ax)
+
+        # Add text annotations showing the counts
+        thresh = cm.max() / 2.0 if cm.size else 0
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                ax.text(j, i, format(cm[i, j], 'd'),
+                        ha="center", va="center",
+                        color="white" if cm[i, j] > thresh else "black")
+
+        # Set axis labels and ticks
+        ax.set_xticks(np.arange(len(class_names)))
+        ax.set_yticks(np.arange(len(class_names)))
+        ax.set_xticklabels(class_names, rotation=45, ha='right')
+        ax.set_yticklabels(class_names)
+        ax.set_xlabel('Predicted Label')
+        ax.set_ylabel('True Label')
+        ax.set_title('Confusion Matrix')
+
+        plt.tight_layout()
+
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        
-        return plt.gcf()
+
+        return fig
     
     @staticmethod
     def plot_prediction_confidence(predictions: np.ndarray,
