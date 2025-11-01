@@ -36,7 +36,7 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     .title-gradient {
-        background: linear-gradient(135deg, #c2185b 0%, #7b1fa2 100%);
+        background: linear-gradient(135deg, #ad1457 0%, #6a1b9a 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
@@ -137,15 +137,15 @@ st.markdown("""
 CLASS_COLORS = {
     "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1": "#e74c3c",
     "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+": "#c0392b",
-    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2": "#d35400",
+    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2": "#a93226",
     "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1": "#3498db",
     "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1C+": "#2980b9",
-    "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T2": "#1abc9c",
+    "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T2": "#1565c0",
     "NORMAL T1": "#27ae60",
-    "NORMAL T2": "#16a085",
+    "NORMAL T2": "#1e8449",
     "Neurocitoma (Central - Intraventricular, Extraventricular) T1": "#9b59b6",
     "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+": "#8e44ad",
-    "Neurocitoma (Central - Intraventricular, Extraventricular) T2": "#af7ac5",
+    "Neurocitoma (Central - Intraventricular, Extraventricular) T2": "#7d3c98",
     "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1": "#f39c12",
     "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1C+": "#e67e22",
     "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T2": "#d68910",
@@ -245,7 +245,7 @@ class NeuropathologyApp:
             self.render_home()
         elif page == 'Detection':
             self.render_detection()
-        elif page == 'Diagnosis Classes':
+        elif page == 'Diagnostic Classes':
             self.render_diagnosis_classes()
         elif page == 'About Model':
             self.render_about_model()
@@ -255,7 +255,7 @@ class NeuropathologyApp:
         """Render the sidebar navigation."""
         st.sidebar.title("Navigation")
         
-        pages = ['Home', 'Diagnosis Classes', 'Detection', 'About Model']
+        pages = ['Home', 'Diagnostic Classes', 'Detection', 'About Model']
         new_page = st.sidebar.radio("Go to", pages)
         
         # Only clear analysis results when switching away from Detection page
@@ -283,21 +283,15 @@ class NeuropathologyApp:
         # Creator information at bottom of sidebar
         st.sidebar.markdown("---")
         st.sidebar.markdown("""
-        <div style="text-align: center; padding: 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea15, #764ba215); border-radius: 10px; margin-top: 1rem;">
-            <p style="color: #667eea; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.3rem;">
-                🧠 NeuroPathology AI
-            </p>
-            <p style="color: #888; font-size: 0.75rem; margin-bottom: 0.5rem;">
-                Version 1.0
-            </p>
-            <p style="color: #666; font-size: 0.8rem; margin-bottom: 0.2rem;">
+        <div style="text-align: center; padding: 1rem 0.5rem; background: linear-gradient(135deg, #667eea15, #764ba215); border-radius: 8px;">
+            <p style="color: #666; font-size: 0.75rem; margin-bottom: 0.3rem;">
                 <strong>Created by</strong>
             </p>
-            <p style="color: #667eea; font-size: 0.95rem; font-weight: 600; margin: 0;">
+            <p style="color: #667eea; font-size: 0.9rem; font-weight: 600; margin: 0;">
                 Aman Raj
             </p>
-            <p style="color: #999; font-size: 0.7rem; margin-top: 0.5rem;">
-                © 2025
+            <p style="color: #888; font-size: 0.7rem; margin-top: 0.3rem;">
+                Version 1.0 | © 2025
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -309,7 +303,7 @@ class NeuropathologyApp:
         <h3>🎯 Project Overview</h3>
     <p style="font-size: 1.1rem; line-height: 1.6;">
     An advanced neuropathology detection system leveraging deep learning to analyze brain MRI scans across multiple imaging modalities (T1, T1C+, T2).<br>
-    Provides real-time <strong>17-class</strong> categorization with clear, color‑coded outputs and reference context.
+    Provides real-time, 17-class categorization with color-coded classes and medical context.
         </p>
         </div>
         """, unsafe_allow_html=True)
@@ -336,7 +330,7 @@ class NeuropathologyApp:
             
             st.markdown("### 🔬 Quick Start")
             st.markdown("""
-            1. Navigate to **Diagnosis Classes** to explore all 17 pathology types
+            1. Navigate to **Diagnostic Classes** to explore all 17 pathology types
             2. Go to **Detection** to analyze MRI scans
             3. Load a trained model from the dropdown menu
             4. Upload an MRI image (or provide a URL)
@@ -361,8 +355,8 @@ class NeuropathologyApp:
             st.metric(label="Input Resolution", value="224×224×3")
 
     def render_diagnosis_classes(self):
-        """Render the diagnosis classes page with color-coded bullets."""
-        st.markdown("## 🏥 Diagnosis Classes")
+        """Render the diagnostic classes page with color-coded bullets."""
+        st.markdown("## 🏥 Diagnostic Classes")
 
         st.markdown("""
         <div class=\"info-box\">
@@ -378,48 +372,117 @@ class NeuropathologyApp:
 
         # Group classes by type for better organization
         class_groups = {
-            "🔴 Gliomas (Malignant Brain Tumors)": [
-                "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1",
-                "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+",
-                "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2"
-            ],
-            "🔵 Meningiomas (Benign/Atypical Tumors)": [
-                "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1",
-                "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1C+",
-                "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T2"
-            ],
-            "🟣 Neurocytomas (Rare Neuronal Tumors)": [
-                "Neurocitoma (Central - Intraventricular, Extraventricular) T1",
-                "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+",
-                "Neurocitoma (Central - Intraventricular, Extraventricular) T2"
-            ],
-            "🟡 Schwannomas (Nerve Sheath Tumors)": [
-                "Schwannoma (Acustico, Vestibular - Trigeminal) T1",
-                "Schwannoma (Acustico, Vestibular - Trigeminal) T1C+",
-                "Schwannoma (Acustico, Vestibular - Trigeminal) T2"
-            ],
-            "🟠 Other Lesions (Abscesses, Cysts, Encephalopathies)": [
-                "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1",
-                "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1C+",
-                "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T2"
-            ],
-            "🟢 Normal Brain Tissue": [
-                "NORMAL T1",
-                "NORMAL T2"
-            ]
+            "🔴 Gliomas (Malignant Brain Tumors)": {
+                "subtitle": "(Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma)",
+                "classes": ["Glioma T1", "Glioma T1C+", "Glioma T2"],
+                "full_names": [
+                    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1",
+                    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+",
+                    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2"
+                ]
+            },
+            "🔵 Meningiomas (Benign/Atypical Tumors)": {
+                "subtitle": "(de Baixo Grau, Atípico, Anaplásico, Transicional)",
+                "classes": ["Meningioma T1", "Meningioma T1C+", "Meningioma T2"],
+                "full_names": [
+                    "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1",
+                    "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T1C+",
+                    "Meningioma (de Baixo Grau, Atípico, Anaplásico, Transicional) T2"
+                ]
+            },
+            "🟣 Neurocytomas (Rare Neuronal Tumors)": {
+                "subtitle": "(Central - Intraventricular, Extraventricular)",
+                "classes": ["Neurocitoma T1", "Neurocitoma T1C+", "Neurocitoma T2"],
+                "full_names": [
+                    "Neurocitoma (Central - Intraventricular, Extraventricular) T1",
+                    "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+",
+                    "Neurocitoma (Central - Intraventricular, Extraventricular) T2"
+                ]
+            },
+            "Schwannomas (Nerve Sheath Tumors)": {
+                "subtitle": "(Acustico, Vestibular - Trigeminal)",
+                "heading_color": "#e91e63",  # Pink color matching Schwannoma T1
+                "classes": ["Schwannoma T1", "Schwannoma T1C+", "Schwannoma T2"],
+                "full_names": [
+                    "Schwannoma (Acustico, Vestibular - Trigeminal) T1",
+                    "Schwannoma (Acustico, Vestibular - Trigeminal) T1C+",
+                    "Schwannoma (Acustico, Vestibular - Trigeminal) T2"
+                ]
+            },
+            "🟠 Other Lesions (Abscesses, Cysts, Encephalopathies)": {
+                "subtitle": "(Abscessos, Cistos, Encefalopatias Diversas)",
+                "classes": ["Outros Tipos de Lesões T1", "Outros Tipos de Lesões T1C+", "Outros Tipos de Lesões T2"],
+                "full_names": [
+                    "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1",
+                    "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T1C+",
+                    "Outros Tipos de Lesões (Abscessos, Cistos, Encefalopatias Diversas) T2"
+                ]
+            },
+            "🟢 Normal Brain Tissue": {
+                "subtitle": "",
+                "classes": ["NORMAL T1", "NORMAL T2"],
+                "full_names": ["NORMAL T1", "NORMAL T2"]
+            }
         }
 
-        for group_name, classes in class_groups.items():
-            st.markdown(f"#### {group_name}")
-            for class_name in classes:
-                color = CLASS_COLORS.get(class_name, "#6c757d")
-                st.markdown(f"""
-                <div class=\"class-item\">
-                    <span style=\"color: {color}; font-size: 1.2em;\">●</span> {class_name}
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
+        for group_name, group_data in class_groups.items():
+            # Determine if we need custom heading color (for Schwannomas)
+            if "heading_color" in group_data:
+                heading_html = f"<h4><span style='color: {group_data['heading_color']}; font-size: 1.8em;'>●</span> {group_name}</h4>"
+                st.markdown(heading_html, unsafe_allow_html=True)
+            else:
+                st.markdown(f"#### {group_name}")
+            
+            if group_data["subtitle"]:
+                st.markdown(f"<p style='color: #666; font-size: 1.1rem; margin-top: -0.5rem; margin-left: 1.5rem; font-style: italic;'>{group_data['subtitle']}</p>", unsafe_allow_html=True)
+            
+            # Display modalities in one line with color-coded circles
+            modality_html = "<div style='margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 1rem;'>"
+            for display_name, full_name in zip(group_data["classes"], group_data["full_names"]):
+                color = CLASS_COLORS.get(full_name, "#6c757d")
+                # Extract just the modality part (T1, T1C+, T2, etc.)
+                modality = display_name.split()[-1] if len(display_name.split()) > 1 else display_name
+                modality_html += f"<span style='color: {color}; font-size: 1.3em; margin-right: 1.5rem;'><span style='font-size: 1.2em;'>●</span> <strong>{modality}</strong></span>"
+            modality_html += "</div>"
+            st.markdown(modality_html, unsafe_allow_html=True)
 
+        st.markdown("---")
+        
+        # MRI Modalities Explanation
+        st.markdown("### 🔬 MRI Imaging Modalities")
+        st.markdown("""
+        <div class="info-box">
+        <p>This system analyzes three different MRI sequence types, each providing unique diagnostic information:</p>
+        
+        <h4 style="color: #667eea; margin-top: 1rem;">T1-Weighted Imaging</h4>
+        <p><strong>T1</strong> sequences provide excellent anatomical detail and are ideal for visualizing:</p>
+        <ul>
+            <li>Normal brain anatomy and structural landmarks</li>
+            <li>Fat-containing tissues (appear bright)</li>
+            <li>Hemorrhage in subacute phase</li>
+            <li>Best for post-contrast enhancement comparison</li>
+        </ul>
+        
+        <h4 style="color: #667eea; margin-top: 1rem;">T1 with Contrast (T1C+)</h4>
+        <p><strong>T1C+</strong> uses gadolinium-based contrast agents to enhance visualization of:</p>
+        <ul>
+            <li>Blood-brain barrier breakdown (tumors, infections, inflammation)</li>
+            <li>Vascular structures and abnormalities</li>
+            <li>Tumor margins and active tumor regions</li>
+            <li>Meningeal involvement and enhancement patterns</li>
+        </ul>
+        
+        <h4 style="color: #667eea; margin-top: 1rem;">T2-Weighted Imaging</h4>
+        <p><strong>T2</strong> sequences are highly sensitive to water content and excel at detecting:</p>
+        <ul>
+            <li>Edema and fluid accumulation</li>
+            <li>Cystic components within tumors</li>
+            <li>White matter lesions and demyelination</li>
+            <li>Peritumoral changes and infiltration</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("---")
         st.markdown("""
         ### 📖 Clinical Resources
@@ -802,19 +865,31 @@ class NeuropathologyApp:
         # All class probabilities - sorted and styled
         st.markdown("### 📋 All Class Probabilities")
         
-        # Create sorted list of (name, probability, color) tuples
-        prob_data = [(name, prob, CLASS_COLORS.get(name, "#6c757d")) 
+        # Helper function to clean class names (remove parentheses content)
+        def clean_class_name(name):
+            # Remove content in parentheses
+            if '(' in name:
+                parts = name.split('(')
+                base = parts[0].strip()
+                # Get the modality (last word after closing parenthesis)
+                if ')' in name:
+                    modality = name.split(')')[-1].strip()
+                    return f"{base} {modality}" if modality else base
+            return name
+        
+        # Create sorted list of (display_name, full_name, probability, color) tuples
+        prob_data = [(clean_class_name(name), name, prob, CLASS_COLORS.get(name, "#6c757d")) 
                      for name, prob in zip(self.class_names, predictions)]
-        prob_data_sorted = sorted(prob_data, key=lambda x: x[1], reverse=True)
+        prob_data_sorted = sorted(prob_data, key=lambda x: x[2], reverse=True)
         
         # Display top 5
         st.markdown("**Top 5 Predictions:**")
-        for i, (name, prob, color) in enumerate(prob_data_sorted[:5], 1):
+        for i, (display_name, full_name, prob, color) in enumerate(prob_data_sorted[:5], 1):
             st.markdown(f"""
             <div style="margin-bottom: 12px; padding: 10px; background: linear-gradient(90deg, {color}20 0%, {color}05 100%); border-radius: 8px; border-left: 4px solid {color};">
                 <span style="font-weight: 600; color: {color};">#{i}</span> 
                 <span style="color: {color}; font-size: 1.1em;">●</span> 
-                <strong>{name}</strong>: {prob*100:.2f}%
+                <strong>{display_name}</strong>: {prob*100:.2f}%
             </div>
             """, unsafe_allow_html=True)
             st.progress(float(prob))
@@ -822,12 +897,12 @@ class NeuropathologyApp:
         # Expandable section for remaining probabilities
         if len(prob_data_sorted) > 5:
             with st.expander(f"📊 View all {len(prob_data_sorted)} class probabilities"):
-                for i, (name, prob, color) in enumerate(prob_data_sorted[5:], 6):
+                for i, (display_name, full_name, prob, color) in enumerate(prob_data_sorted[5:], 6):
                     st.markdown(f"""
                     <div style="margin-bottom: 12px; padding: 10px; background: linear-gradient(90deg, {color}20 0%, {color}05 100%); border-radius: 8px; border-left: 4px solid {color};">
                         <span style="font-weight: 600; color: {color};">#{i}</span> 
                         <span style="color: {color}; font-size: 1.1em;">●</span> 
-                        <strong>{name}</strong>: {prob*100:.2f}%
+                        <strong>{display_name}</strong>: {prob*100:.2f}%
                     </div>
                     """, unsafe_allow_html=True)
                     st.progress(float(prob))
