@@ -1,18 +1,10 @@
 """
-Streamlit Web Application for Neuropathology Detection
-
-A modern, interactive web interface for brain MRI analysis using deep learning.
-
-This application demonstrates:
-- Deep learning model deployment
-- Interactive medical image analysis
-- Real-time prediction visualization
-
+NeuroPathology AI Diagnostics - Streamlit Web Application
+Interactive web interface for brain MRI analysis using deep learning.
 """
 
 import streamlit as st
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 import sys
 import os
@@ -20,19 +12,15 @@ import plotly.graph_objects as go
 from urllib.request import urlopen, Request
 from io import BytesIO
 
-# Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.models.neuropathology_model import NeuropathologyModel, create_callbacks
+from src.models.neuropathology_model import NeuropathologyModel
 from src.data.data_loader import MRIDataLoader
-from src.utils.helpers import (
-    Visualizer, ModelEvaluator, get_class_names, 
-    get_class_descriptions, get_mri_findings, create_sample_data
-)
+from src.utils.helpers import get_class_names, get_class_descriptions, get_mri_findings
 
 # Page configuration
 st.set_page_config(
-    page_title="Neuropathology Detection System",
+    page_title="NeuroPathology AI Diagnostics",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -45,10 +33,12 @@ st.markdown("""
         font-size: 3rem;
         font-weight: bold;
         text-align: center;
+        margin-bottom: 1rem;
+    }
+    .title-gradient {
         background: linear-gradient(135deg, #c2185b 0%, #7b1fa2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 1rem;
     }
     .sub-header {
         font-size: 1.35rem;
@@ -166,27 +156,26 @@ CLASS_COLORS = {
 
 
 class NeuropathologyApp:
-    """
-    Main application class for the Streamlit interface.
-    """
+    """Main application class for the Streamlit interface."""
     
     def __init__(self):
-        """Initialize the application."""
         self.class_names = get_class_names()
         self.class_descriptions = get_class_descriptions()
         self.class_mri_findings = get_mri_findings()
         self.data_loader = MRIDataLoader(img_size=(224, 224))
         
-        # Initialize session state
         if 'model' not in st.session_state:
             st.session_state.model = None
         if 'model_loaded' not in st.session_state:
             st.session_state.model_loaded = False
         if 'available_models' not in st.session_state:
             st.session_state.available_models = self._discover_models()
+        if 'uploaded_image' not in st.session_state:
+            st.session_state.uploaded_image = None
+        if 'image_source' not in st.session_state:
+            st.session_state.image_source = None
     
     def _discover_models(self):
-        """Discover available trained models in the models directory."""
         models_dir = 'models'
         available = []
         if os.path.exists(models_dir):
@@ -196,7 +185,6 @@ class NeuropathologyApp:
         return sorted(available)
     
     def _load_model(self, model_name):
-        """Load a specific model by name."""
         try:
             model_path = os.path.join('models', model_name)
             wrapper = NeuropathologyModel()
@@ -207,6 +195,9 @@ class NeuropathologyApp:
             
             # Try to load class names and metrics for dynamic UI
             class_names_path = os.path.join('models', 'class_names.json')
+            # Prefer per-model metrics if available, else fall back to global metrics.json
+            base = os.path.splitext(model_name)[0]
+            metrics_path_specific = os.path.join('models', f'metrics_{base}.json')
             metrics_path = os.path.join('models', 'metrics.json')
             if os.path.exists(class_names_path):
                 import json
@@ -214,7 +205,12 @@ class NeuropathologyApp:
                     saved_names = json.load(f)
                 if isinstance(saved_names, list) and len(saved_names) >= 2:
                     self.class_names = saved_names
-            if os.path.exists(metrics_path):
+            # Load per-model metrics first
+            if os.path.exists(metrics_path_specific):
+                import json
+                with open(metrics_path_specific, 'r') as f:
+                    st.session_state.metrics = json.load(f)
+            elif os.path.exists(metrics_path):
                 import json
                 with open(metrics_path, 'r') as f:
                     st.session_state.metrics = json.load(f)
@@ -228,12 +224,14 @@ class NeuropathologyApp:
     
     def run(self):
         """Run the main application."""
-        # Header with plain emoji (no gradient applied to emoji)
+        # Header with inline emoji and improved title
         st.markdown("""
         <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🧠</div>
-            <h1 class="main-header">Neuropathology Detection System</h1>
-            <p class="sub-header">AI-Powered Brain MRI Analysis Using Deep Learning</p>
+            <h1 class="main-header" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <span style="font-size: 3rem;">🧠</span>
+                <span class="title-gradient">NeuroPathology AI Diagnostics</span>
+            </h1>
+            <p class="sub-header" style="font-size: 1.5rem;">Advanced Deep Learning for Precision Brain MRI Analysis</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -260,10 +258,12 @@ class NeuropathologyApp:
         pages = ['Home', 'Diagnosis Classes', 'Detection', 'About Model']
         new_page = st.sidebar.radio("Go to", pages)
         
-        # Clear analysis results when switching away from Detection page
+        # Only clear analysis results when switching away from Detection page
+        # but keep the uploaded image
         if 'page' in st.session_state and st.session_state.page != new_page:
-            if 'analysis_results' in st.session_state:
-                del st.session_state.analysis_results
+            if new_page != 'Detection' and 'analysis_results' in st.session_state:
+                # Keep analysis_results when returning to Detection
+                pass
         
         st.session_state.page = new_page
         
@@ -283,15 +283,16 @@ class NeuropathologyApp:
     def render_home(self):
         """Render the home page."""
         st.markdown("""
-        <div class=\"info-box\">
+        <div class=\"info-box\" style="text-align: center;">
         <h3>🎯 Project Overview</h3>
-        <p>
-        This neuropathology detection system uses deep learning techniques to analyze 
-        brain MRI scans and identify various pathological conditions across multiple 
-        imaging modalities (T1, T1C+, T2).
+    <p style="font-size: 1.1rem; line-height: 1.6;">
+    An advanced neuropathology detection system leveraging deep learning to analyze brain MRI scans across multiple imaging modalities (T1, T1C+, T2).<br>
+    Provides real-time <strong>17-class</strong> categorization with clear, color‑coded outputs and reference context.
         </p>
         </div>
         """, unsafe_allow_html=True)
+
+        st.markdown("<div style='margin: 2.5rem 0;'></div>", unsafe_allow_html=True)
 
         col1, col2 = st.columns([1, 1])
 
@@ -333,10 +334,23 @@ class NeuropathologyApp:
             st.metric(label="Classification Classes", value=str(len(self.class_names)))
             st.metric(label="Test Accuracy", value=acc_val)
             st.metric(label="Input Resolution", value="224×224×3")
+        
+        # Creator information at bottom
+        st.markdown("---")
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem 0 1rem 0;">
+            <p style="color: #666; font-size: 0.95rem; margin-bottom: 0.5rem;">
+                <strong>Created by:</strong> <span style="color: #667eea; font-weight: 600;">Aman Raj</span>
+            </p>
+            <p style="color: #888; font-size: 0.85rem; font-family: monospace;">
+                Version 1.0 | 2025
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
     def render_diagnosis_classes(self):
         """Render the diagnosis classes page with color-coded bullets."""
-        st.markdown("## � Diagnosis Classes")
+        st.markdown("## 🏥 Diagnosis Classes")
 
         st.markdown("""
         <div class=\"info-box\">
@@ -367,7 +381,7 @@ class NeuropathologyApp:
                 "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+",
                 "Neurocitoma (Central - Intraventricular, Extraventricular) T2"
             ],
-            "🩷 Schwannomas (Nerve Sheath Tumors)": [
+            "🟡 Schwannomas (Nerve Sheath Tumors)": [
                 "Schwannoma (Acustico, Vestibular - Trigeminal) T1",
                 "Schwannoma (Acustico, Vestibular - Trigeminal) T1C+",
                 "Schwannoma (Acustico, Vestibular - Trigeminal) T2"
@@ -440,13 +454,42 @@ class NeuropathologyApp:
                 st.error("No trained models found in the `models/` directory. Please train a model first using `train.py`.")
             return
         
-        # Model loaded - show analysis interface
-        st.markdown(f"""
-        <div class="success-box">
-        <h4>✅ Model Loaded: {st.session_state.get('loaded_model_name', 'N/A')}</h4>
-        <p>Ready for analysis. Upload or fetch an MRI image below.</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Model loaded - show analysis interface with test accuracy and change model option
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            # Get test accuracy for display
+            test_acc = "-"
+            if 'metrics' in st.session_state and isinstance(st.session_state.metrics, dict):
+                try:
+                    test_acc = f"{float(st.session_state.metrics.get('accuracy', 0))*100:.2f}%"
+                except Exception:
+                    pass
+            
+            st.markdown(f"""
+            <div class="success-box">
+            <h4>✅ Model Loaded: {st.session_state.get('loaded_model_name', 'N/A')}</h4>
+            <p><strong>📊 Test Accuracy:</strong> {test_acc} | Ready for analysis</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            # Change model dropdown
+            change_model = st.selectbox(
+                "🔄 Change Model:",
+                ["-- Keep Current --"] + st.session_state.available_models,
+                key="change_model_selector",
+                help="Select a different model to compare results"
+            )
+            
+            if change_model != "-- Keep Current --" and change_model != st.session_state.get('loaded_model_name'):
+                with st.spinner(f"Loading model: {change_model}..."):
+                    if self._load_model(change_model):
+                        # Clear previous analysis results when changing model
+                        if 'analysis_results' in st.session_state:
+                            del st.session_state.analysis_results
+                        st.success(f"✅ Switched to: {change_model}")
+                        st.rerun()
         
         st.markdown("""
         <div class="info-box">
@@ -454,6 +497,15 @@ class NeuropathologyApp:
         the image using deep learning and provide predictions with confidence scores.
         </div>
         """, unsafe_allow_html=True)
+
+        # Clear button if image exists
+        if st.session_state.uploaded_image is not None:
+            if st.button("🗑️ Clear Image & Results", use_container_width=False):
+                st.session_state.uploaded_image = None
+                st.session_state.image_source = None
+                if 'analysis_results' in st.session_state:
+                    del st.session_state.analysis_results
+                st.rerun()
         
         # Input sources: file upload or URL
         col_up, col_url = st.columns([1, 1])
@@ -472,10 +524,18 @@ class NeuropathologyApp:
 
         image = None
         src_label = None
-        if uploaded_file is not None:
+
+        # Check if we have a stored image
+        if st.session_state.uploaded_image is not None and uploaded_file is None and not (image_url and fetch_from_url):
+            image = st.session_state.uploaded_image
+            src_label = st.session_state.image_source
+        elif uploaded_file is not None:
             try:
                 image = Image.open(uploaded_file)
                 src_label = 'Uploaded MRI Scan'
+                # Store in session state
+                st.session_state.uploaded_image = image
+                st.session_state.image_source = src_label
             except Exception as e:
                 st.error(f"Could not open uploaded image: {e}")
         elif image_url and fetch_from_url:
@@ -485,6 +545,9 @@ class NeuropathologyApp:
                     data = resp.read()
                 image = Image.open(BytesIO(data))
                 src_label = 'Fetched MRI Scan'
+                # Store in session state
+                st.session_state.uploaded_image = image
+                st.session_state.image_source = src_label
             except Exception as e:
                 st.error(f"Failed to fetch image from URL: {e}")
 
@@ -494,9 +557,14 @@ class NeuropathologyApp:
             
             with col1:
                 st.markdown("### 📷 Uploaded Image")
-                st.image(image, caption=src_label, use_container_width=True)
-                
-                # Image info with mode explanation
+                # Show image at natural size within column width (no caption)
+                st.image(image, use_container_width=True)
+            
+            with col2:
+                # Add a bit more top padding before image details to improve alignment
+                st.markdown("<div style='height: 48px;'></div>", unsafe_allow_html=True)
+
+                # Image details first to occupy top of right column
                 mode_desc = {
                     'L': 'Grayscale (8-bit pixels)',
                     'RGB': 'True Color (3×8-bit pixels)',
@@ -504,15 +572,24 @@ class NeuropathologyApp:
                     'P': 'Palette mode',
                     '1': 'Binary (1-bit pixels)'
                 }.get(image.mode, image.mode)
-                
-                st.markdown(f"""
-                **Image Details:**
-                - Size: {image.size[0]}×{image.size[1]} pixels
-                - Mode: {mode_desc}
-                - Source: {src_label}
-                """)
-            
-            with col2:
+
+                st.markdown(
+                    f"""
+                    <div class=\"info-box\"> 
+                        <h4>🖼️ Image Details</h4>
+                        <ul style=\"margin: 0; padding-left: 1.2rem;\"> 
+                            <li><strong>Size:</strong> {image.size[0]}×{image.size[1]} pixels</li>
+                            <li><strong>Mode:</strong> {mode_desc}</li>
+                            <li><strong>Source:</strong> {src_label}</li>
+                        </ul>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                # Spacer between image details and analysis
+                st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
                 st.markdown("### 🤖 Analysis")
                 
                 # Show analyze button if no results yet
@@ -532,11 +609,12 @@ class NeuropathologyApp:
                                 img_array = self.data_loader.load_and_preprocess_image(temp_path)
                                 img_batch = np.expand_dims(img_array, axis=0)
                                 
-                                # Make prediction using trained model if loaded, otherwise demo
+                                # Make prediction using trained model
                                 if st.session_state.model_loaded and st.session_state.model is not None:
                                     predictions = st.session_state.model.predict(img_batch)
                                 else:
-                                    predictions = self.predict_with_demo_model(img_batch)
+                                    st.error("Model not loaded properly. Please reload the model.")
+                                    return
                                 
                                 # Get predicted class and confidence
                                 predicted_class = np.argmax(predictions[0])
@@ -588,6 +666,8 @@ class NeuropathologyApp:
                     if st.button("🔄 Re-analyze", key="reanalyze", use_container_width=True):
                         del st.session_state.analysis_results
                         st.rerun()
+
+                # End of right column content
             
             # Display detailed results in full-width section if available
             if 'analysis_results' in st.session_state:
@@ -602,32 +682,7 @@ class NeuropathologyApp:
         else:
             st.info("👆 Please load a model and upload a brain MRI image to begin analysis")
     
-    def predict_with_demo_model(self, img_batch: np.ndarray) -> np.ndarray:
-        """
-        Make predictions using a demo model.
-        
-        In production, this would load and use a trained model.
-        For now, it generates realistic-looking predictions for demonstration.
-        
-        Args:
-            img_batch: Batch of preprocessed images
-        
-        Returns:
-            Prediction probabilities
-        """
-        # Generate realistic-looking predictions
-        # In production, replace with: model.predict(img_batch)
-        
-        # Create probabilities that look realistic for all classes
-        # One class dominant, others much lower
-        num_classes = len(self.class_names)
-        alpha = np.ones(num_classes) * 0.5
-        probs = np.random.dirichlet(alpha, size=1)
-        
-        return probs
-    
     def display_detailed_results(self, predictions: np.ndarray, predicted_class: int, class_name: str):
-        """Display detailed analysis results (plots, descriptions, probabilities)."""
         
         # Get color for the predicted class
         class_color = CLASS_COLORS.get(class_name, "#6c757d")
@@ -645,30 +700,73 @@ class NeuropathologyApp:
                 short_name = name
             short_labels.append(short_name)
         
-        # Confidence scores for all classes - responsive visualization
-        fig = go.Figure(data=[
-            go.Bar(
-                x=short_labels,
-                y=predictions,
-                marker_color=[CLASS_COLORS.get(name, '#6c757d') if i == predicted_class else '#e0e0e0' 
-                             for i, name in enumerate(self.class_names)],
-                text=[f'{p*100:.1f}%' for p in predictions],
-                textposition='auto',
-                hovertemplate='<b>%{x}</b><br>Confidence: %{y:.1%}<extra></extra>'
+        # Confidence scores for all classes - responsive visualization with hover darkening
+        # All bars use their assigned color codes (not greyed out)
+        import colorsys
+        
+        bar_colors = []
+        hover_label_colors = []
+        
+        for i, name in enumerate(self.class_names):
+            # Use the assigned color for each class
+            base_color = CLASS_COLORS.get(name, '#6c757d')
+            bar_colors.append(base_color)
+            
+            # Darken the color for hover tooltip by reducing lightness
+            hex_color = base_color.lstrip('#')
+            r, g, b = tuple(int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+            h, l, s = colorsys.rgb_to_hls(r, g, b)
+            # Reduce lightness by 30% for hover
+            darker_l = max(0, l * 0.7)
+            r_dark, g_dark, b_dark = colorsys.hls_to_rgb(h, darker_l, s)
+            darker_hex = '#{:02x}{:02x}{:02x}'.format(
+                int(r_dark * 255), int(g_dark * 255), int(b_dark * 255)
             )
-        ])
+            hover_label_colors.append(darker_hex)
+        
+        # Create bar chart with individual traces for custom hover tooltip colors
+        fig = go.Figure()
+        
+        for i, (label, pred, color, hover_label_color) in enumerate(
+            zip(short_labels, predictions, bar_colors, hover_label_colors)
+        ):
+            # Make predicted class bar slightly more opaque
+            opacity = 1.0 if i == predicted_class else 0.85
+            
+            fig.add_trace(go.Bar(
+                x=[label],
+                y=[pred],
+                marker=dict(
+                    color=color,
+                    opacity=opacity,
+                    line=dict(width=0)
+                ),
+                text=f'{pred*100:.1f}%',
+                textposition='auto',
+                hovertemplate='<b>%{x}</b><br>Confidence: %{y:.1%}<extra></extra>',
+                hoverlabel=dict(
+                    bgcolor=hover_label_color,
+                    font_size=13,
+                    font_family="sans-serif",
+                    font_color="white",
+                    bordercolor=hover_label_color
+                ),
+                showlegend=False
+            ))
         
         fig.update_layout(
             title='Prediction Confidence for All Classes',
             xaxis_title='Pathology Type',
             yaxis_title='Confidence Score',
-            yaxis=dict(range=[0, 1], tickformat='.0%'),
+            yaxis=dict(range=[0, 1], tickformat='.0%', showspikes=False),
+            xaxis=dict(tickangle=-45, showspikes=False),
             height=500,
-            hovermode='x unified',
-            xaxis={'tickangle': -45}
+            hovermode='closest',
+            bargap=0.15
         )
         
         st.plotly_chart(fig, use_container_width=True, key="confidence_chart")
+        
         
         # Class description and characteristic MRI findings
         st.markdown("### 📖 About This Condition")
@@ -710,7 +808,8 @@ class NeuropathologyApp:
             with st.expander(f"📊 View all {len(prob_data_sorted)} class probabilities"):
                 for i, (name, prob, color) in enumerate(prob_data_sorted[5:], 6):
                     st.markdown(f"""
-                    <div style="margin-bottom: 8px;">
+                    <div style="margin-bottom: 12px; padding: 10px; background: linear-gradient(90deg, {color}20 0%, {color}05 100%); border-radius: 8px; border-left: 4px solid {color};">
+                        <span style="font-weight: 600; color: {color};">#{i}</span> 
                         <span style="color: {color}; font-size: 1.1em;">●</span> 
                         <strong>{name}</strong>: {prob*100:.2f}%
                     </div>
@@ -769,15 +868,15 @@ class NeuropathologyApp:
             - Freeze base model weights
             - Train only classification head
             - Learn task-specific features
-            - Epochs: 20-30
+            - Epochs: 50
             - Learning rate: 0.001
             
             **Stage 2: Fine-Tuning**
             - Unfreeze last 20 layers
             - Fine-tune with lower learning rate
             - Adapt features to medical images
-            - Epochs: 10-20
-            - Learning rate: 0.0001
+            - Epochs: 70
+            - Learning rate: 0.0005
             
             **Optimization:**
             - Optimizer: Adam

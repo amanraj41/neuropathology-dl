@@ -1,0 +1,120 @@
+{
+  "accuracy": 0.9034690799396682,
+  "classification_report": {
+    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1": {
+      "precision": 0.953125,
+      "recall": 0.9384615384615385,
+      "f1-score": 0.9457364341085271,
+      "support": 65.0
+    },
+    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+": {
+      "precision": 0.96,
+      "recall": 0.9473684210526315,
+      "f1-score": 0.9536423841059603,
+      "support": 76.0
+    },
+    "Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T2": {
+      "precision": 0.9166666666666666,
+      "recall": 0.6346153846153846,
+      "f1-score": 0.75,
+      "support": 52.0
+    },
+    "Meningioma (de Baixo Grau, At\u00edpico, Anapl\u00e1sico, Transicional) T1": {
+      "precision": 0.9411764705882353,
+      "recall": 0.9230769230769231,
+      "f1-score": 0.9320388349514563,
+      "support": 52.0
+    },
+    "Meningioma (de Baixo Grau, At\u00edpico, Anapl\u00e1sico, Transicional) T1C+": {
+      "precision": 0.9468085106382979,
+      "recall": 0.9468085106382979,
+      "f1-score": 0.9468085106382979,
+      "support": 94.0
+    },
+    "Meningioma (de Baixo Grau, At\u00edpico, Anapl\u00e1sico, Transicional) T2": {
+      "precision": 0.6527777777777778,
+      "recall": 0.9591836734693877,
+      "f1-score": 0.7768595041322314,
+      "support": 49.0
+    },
+    "NORMAL T1": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 41.0
+    },
+    "NORMAL T2": {
+      "precision": 0.7719298245614035,
+      "recall": 1.0,
+      "f1-score": 0.8712871287128713,
+      "support": 44.0
+    },
+    "Neurocitoma (Central - Intraventricular, Extraventricular) T1": {
+      "precision": 1.0,
+      "recall": 0.92,
+      "f1-score": 0.9583333333333334,
+      "support": 25.0
+    },
+    "Neurocitoma (Central - Intraventricular, Extraventricular) T1C+": {
+      "precision": 0.9736842105263158,
+      "recall": 0.9487179487179487,
+      "f1-score": 0.961038961038961,
+      "support": 39.0
+    },
+    "Neurocitoma (Central - Intraventricular, Extraventricular) T2": {
+      "precision": 1.0,
+      "recall": 0.8235294117647058,
+      "f1-score": 0.9032258064516129,
+      "support": 17.0
+    },
+    "Outros Tipos de Les\u00f5es (Abscessos, Cistos, Encefalopatias Diversas) T1": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 23.0
+    },
+    "Outros Tipos de Les\u00f5es (Abscessos, Cistos, Encefalopatias Diversas) T1C+": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 7.0
+    },
+    "Outros Tipos de Les\u00f5es (Abscessos, Cistos, Encefalopatias Diversas) T2": {
+      "precision": 1.0,
+      "recall": 0.2222222222222222,
+      "f1-score": 0.36363636363636365,
+      "support": 9.0
+    },
+    "Schwannoma (Acustico, Vestibular - Trigeminal) T1": {
+      "precision": 0.9090909090909091,
+      "recall": 0.8695652173913043,
+      "f1-score": 0.8888888888888888,
+      "support": 23.0
+    },
+    "Schwannoma (Acustico, Vestibular - Trigeminal) T1C+": {
+      "precision": 0.8529411764705882,
+      "recall": 1.0,
+      "f1-score": 0.9206349206349206,
+      "support": 29.0
+    },
+    "Schwannoma (Acustico, Vestibular - Trigeminal) T2": {
+      "precision": 0.9,
+      "recall": 0.5,
+      "f1-score": 0.6428571428571429,
+      "support": 18.0
+    },
+    "accuracy": 0.9034690799396682,
+    "macro avg": {
+      "precision": 0.9281294439011879,
+      "recall": 0.8607970147888437,
+      "f1-score": 0.8714698949112099,
+      "support": 663.0
+    },
+    "weighted avg": {
+      "precision": 0.9174812379582686,
+      "recall": 0.9034690799396682,
+      "f1-score": 0.8998479075459604,
+      "support": 663.0
+    }
+  }
+}
