@@ -279,6 +279,28 @@ class NeuropathologyApp:
             step=0.05,
             help="Minimum confidence for predictions"
         )
+        
+        # Creator information at bottom of sidebar
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("""
+        <div style="text-align: center; padding: 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea15, #764ba215); border-radius: 10px; margin-top: 1rem;">
+            <p style="color: #667eea; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.3rem;">
+                🧠 NeuroPathology AI
+            </p>
+            <p style="color: #888; font-size: 0.75rem; margin-bottom: 0.5rem;">
+                Version 1.0
+            </p>
+            <p style="color: #666; font-size: 0.8rem; margin-bottom: 0.2rem;">
+                <strong>Created by</strong>
+            </p>
+            <p style="color: #667eea; font-size: 0.95rem; font-weight: 600; margin: 0;">
+                Aman Raj
+            </p>
+            <p style="color: #999; font-size: 0.7rem; margin-top: 0.5rem;">
+                © 2025
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     def render_home(self):
         """Render the home page."""
@@ -299,7 +321,10 @@ class NeuropathologyApp:
         with col1:
             st.markdown("### 🚀 Key Features")
             st.markdown("""
-            - **Deep Learning Framework**: TensorFlow 2.20+ with Keras 3.11
+            - **Deep Learning Framework**: TensorFlow 2.17.0 with Keras 3.4.1
+            - **CUDA® Toolkit**: 12.3
+            - **cuDNN SDK**: 8.9.7
+            - **NVIDIA® GPU Driver**: Version 576.83
             - **Architecture**: MobileNetV2 (ImageNet pre-trained)
             - **Training Strategy**: Two-stage transfer learning with fine-tuning
             - **17-Class Classification**: Covers gliomas, meningiomas, schwannomas, neurocytomas, lesions & normal scans
@@ -334,19 +359,6 @@ class NeuropathologyApp:
             st.metric(label="Classification Classes", value=str(len(self.class_names)))
             st.metric(label="Test Accuracy", value=acc_val)
             st.metric(label="Input Resolution", value="224×224×3")
-        
-        # Creator information at bottom
-        st.markdown("---")
-        st.markdown("""
-        <div style="text-align: center; padding: 2rem 0 1rem 0;">
-            <p style="color: #666; font-size: 0.95rem; margin-bottom: 0.5rem;">
-                <strong>Created by:</strong> <span style="color: #667eea; font-weight: 600;">Aman Raj</span>
-            </p>
-            <p style="color: #888; font-size: 0.85rem; font-family: monospace;">
-                Version 1.0 | 2025
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
 
     def render_diagnosis_classes(self):
         """Render the diagnosis classes page with color-coded bullets."""
@@ -474,15 +486,19 @@ class NeuropathologyApp:
         
         with col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            # Change model dropdown
+            # Change model dropdown - show current model as default
+            current_model = st.session_state.get('loaded_model_name', '')
+            # Create list with current model first, then others
+            model_options = [current_model] + [m for m in st.session_state.available_models if m != current_model]
+            
             change_model = st.selectbox(
                 "🔄 Change Model:",
-                ["-- Keep Current --"] + st.session_state.available_models,
+                model_options,
                 key="change_model_selector",
                 help="Select a different model to compare results"
             )
             
-            if change_model != "-- Keep Current --" and change_model != st.session_state.get('loaded_model_name'):
+            if change_model != current_model:
                 with st.spinner(f"Loading model: {change_model}..."):
                     if self._load_model(change_model):
                         # Clear previous analysis results when changing model
@@ -856,6 +872,20 @@ class NeuropathologyApp:
             **Total Parameters:** 3.05 Million
             - Trainable: 0.79 Million
             - Frozen (base): 2.26 Million
+            
+            ### 🖥️ Trained On
+            
+            **Hardware:**
+            - GPU: NVIDIA® GeForce MX330
+            - VRAM: 2GB
+            
+            **Software Environment:**
+            - CUDA® Toolkit: 12.3
+            - cuDNN SDK: 8.9.7
+            - NVIDIA® GPU Driver: Version 576.83
+            - WSL Version: 2.6.1.0
+            - OS Image: Ubuntu 24.04.1 LTS
+            - Host OS: Windows 10.0.26200.6899
             """)
         
         with col2:
