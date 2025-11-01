@@ -547,7 +547,7 @@ class NeuropathologyModel:
         return predicted_classes, confidence_scores
 
 
-def create_callbacks(model_path: str = 'models/best_model.h5') -> list:
+def create_callbacks(model_path: str = 'models/best_model.h5', csv_log_path: Optional[str] = None, initial_value_threshold: Optional[float] = None) -> list:
     """
     Create training callbacks for monitoring and optimization.
     
@@ -583,7 +583,9 @@ def create_callbacks(model_path: str = 'models/best_model.h5') -> list:
             monitor='val_accuracy',
             save_best_only=True,
             mode='max',
-            verbose=1
+            verbose=1,
+            # Protect prior best when resuming: only save if better than previous best
+            initial_value_threshold=initial_value_threshold
         ),
         
         # Early stopping to prevent overfitting
@@ -609,5 +611,17 @@ def create_callbacks(model_path: str = 'models/best_model.h5') -> list:
             histogram_freq=1
         )
     ]
+    
+    # Optional CSV logger for per-epoch metrics
+    if csv_log_path:
+        try:
+            callbacks.append(
+                keras.callbacks.CSVLogger(
+                    filename=csv_log_path,
+                    append=True
+                )
+            )
+        except Exception as e:
+            print(f"[Warning] Failed to create CSVLogger at {csv_log_path}: {e}")
     
     return callbacks

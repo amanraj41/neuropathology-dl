@@ -6,10 +6,13 @@ A comprehensive deep learning system for detecting neuropathological conditions 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.29-red.svg)](https://streamlit.io)
 
+**Created by**: Aman Raj | **Version**: 1.0 | **Year**: 2025
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
+- [Quick Start](#quick-start)
 - [System Architecture](#system-architecture)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -27,9 +30,11 @@ A comprehensive deep learning system for detecting neuropathological conditions 
 
 This project implements a complete neuropathology detection system powered by deep learning for medical image (MRI) analysis. It features:
 
-- **Transfer Learning**: Leverages pre-trained MobileNetV2 model trained on ImageNet
+- **Flexible Base Models**: Supports MobileNetV2, EfficientNetB0, ResNet50, and VGG16
+- **Transfer Learning**: Leverages pre-trained models trained on ImageNet
 - **Fine-tuning**: Adapts general image features to medical imaging domain
 - **Modern Web Interface**: Interactive Streamlit application for real-time predictions
+- **Pre-trained Models**: Includes ready-to-use models (92.16% test accuracy with MobileNetV2)
 
 
 ### Detected Conditions
@@ -50,23 +55,66 @@ Each class includes detailed clinical information and characteristic MRI finding
 
 ### Technical Features
 
-- **Transfer Learning with MobileNetV2**: Efficient pre-trained base model (ImageNet weights)
-- **Two-Stage Training**: Feature extraction followed by fine-tuning for optimal results
+- **Flexible Base Models**: Choose from MobileNetV2, EfficientNetB0, ResNet50, or VGG16
+- **Transfer Learning**: Pre-trained models with ImageNet weights for faster convergence
+- **Two-Stage Training**: Feature extraction (50 epochs) + Fine-tuning (70 epochs, LR=0.0005)
 - **Data Augmentation**: Rotation, zoom, and flip transformations to improve generalization
 - **Comprehensive Metrics**: Accuracy, precision, recall, F1-score, AUC-ROC
 - **Model Callbacks**: Early stopping, learning rate scheduling, model checkpoints
 - **Visualization Tools**: Training curves, confusion matrices, prediction confidence
-- **Automatic Fallback**: Robust model loading with fallback mechanisms
+- **Dynamic Evaluation**: Automatic test accuracy computation and per-model metrics
+- **Pre-trained Models Included**: Best finetuned model achieves 92.16% test accuracy
 
 ### User Interface Features
 
 - **Modern Web Design**: Clean, intuitive Streamlit interface
-- **Manual Model Loading**: Load trained models on-demand with dropdown selection
+- **Model Selection & Switching**: Load and compare different trained models dynamically
 - **Real-time Predictions**: Upload MRI images or fetch from URL for instant diagnosis
+- **Test Accuracy Display**: View model performance metrics directly in the UI
 - **Confidence Scores**: Detailed probability distributions for all 17 classes
 - **Clinical Information**: Comprehensive medical descriptions and MRI findings for each diagnosed pathology
 - **Interactive Visualizations**: Plotly charts for prediction analysis
 - **Responsive Layout**: Works on desktop and mobile devices
+
+## 🚀 Quick Start
+
+### Option 1: Use Pre-trained Models (Recommended)
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/amanraj41/neuropathology-dl.git
+cd neuropathology-dl
+```
+
+2. **Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+3. **Run the app:**
+```bash
+streamlit run app.py
+```
+
+The app includes pre-trained models in the `models/` directory ready for immediate use!
+
+### Option 2: Train Your Own Model
+
+If you have sufficient computational resources or want to experiment:
+
+1. **Clone and install** (as above)
+
+2. **Prepare your dataset** (see [Dataset](#dataset) section)
+
+3. **Train the model:**
+```bash
+python train.py --data_dir ./data/brain_mri_17 --base_model mobilenet --epochs_stage1 50 --epochs_stage2 70
+```
+
+4. **Run the app:**
+```bash
+streamlit run app.py
+```
 
 ## 🏗️ System Architecture
 
@@ -74,6 +122,9 @@ Each class includes detailed clinical information and characteristic MRI finding
 ┌─────────────────────────────────────────────────────────────┐
 │                     User Interface Layer                      │
 │                    (Streamlit Web App)                        │
+│         - Model Selection & Switching                         │
+│         - Test Accuracy Display                               │
+│         - Image Upload & URL Fetch                            │
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
@@ -87,12 +138,18 @@ Each class includes detailed clinical information and characteristic MRI finding
 ┌────────────────────────▼────────────────────────────────────┐
 │                  Deep Learning Layer                          │
 │  ┌──────────────────────────────────────────────────┐        │
-│  │           Pre-trained Base Model                 │        │
-│  │              (MobileNetV2)                       │        │
+│  │       Pre-trained Base Model (Choose One)        │        │
+│  │    • MobileNetV2 (Default, Efficient)            │        │
+│  │    • EfficientNetB0 (Balanced)                   │        │
+│  │    • ResNet50 (Powerful)                         │        │
+│  │    • VGG16 (Classic)                             │        │
 │  └──────────────────────┬───────────────────────────┘        │
 │  ┌──────────────────────▼───────────────────────────┐        │
 │  │         Custom Classification Head               │        │
-│  │  (Dense Layers + Dropout + Batch Norm)           │        │
+│  │  GlobalAveragePooling → BatchNorm →              │        │
+│  │  Dense(512, ReLU) → Dropout(0.5) →               │        │
+│  │  Dense(256, ReLU) → BatchNorm → Dropout(0.3) →   │        │
+│  │  Dense(17, Softmax)                              │        │
 │  └──────────────────────────────────────────────────┘        │
 └────────────────────────┬────────────────────────────────────┘
                          │
@@ -100,7 +157,7 @@ Each class includes detailed clinical information and characteristic MRI finding
 │                  Data Processing Layer                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │Image Loading │  │Preprocessing │  │ Augmentation │      │
-│  │              │  │ & Resizing   │  │              │      │
+│  │              │  │ & Resizing   │  │ (Training)   │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -174,15 +231,28 @@ Notes:
 
 ```bash
 python train.py \
-    --data_dir ./data/brain_mri_data \  # Path to dataset
-    --base_model mobilenet \            # Model architecture (mobilenet recommended)
-    --batch_size 16 \                   # Batch size (16 for 4-core CPU)
-    --epochs_stage1 10 \                # Feature extraction epochs
-    --epochs_stage2 5 \                 # Fine-tuning epochs
+    --data_dir ./data/brain_mri_17 \    # Path to dataset
+    --base_model mobilenet \            # Base architecture: mobilenet, efficientnet, resnet50, vgg16
+    --batch_size 16 \                   # Batch size (16 recommended for CPU)
+    --epochs_stage1 50 \                # Feature extraction epochs
+    --epochs_stage2 70 \                # Fine-tuning epochs
     --learning_rate 0.001 \             # Initial learning rate
-    --learning_rate_finetune 0.0001 \   # Fine-tuning learning rate
+    --learning_rate_finetune 0.0005 \   # Fine-tuning learning rate (updated)
     --trainable_layers 20               # Layers to fine-tune
 ```
+
+**Supported Base Models:**
+- `mobilenet` - MobileNetV2 (Default, efficient, ~2.2M params)
+- `efficientnet` - EfficientNetB0 (Balanced accuracy/efficiency, ~4.0M params)
+- `resnet50` - ResNet50 (Powerful, ~23.5M params)
+- `vgg16` - VGG16 (Classic, ~14.7M params)
+
+The training script automatically handles base model selection, creates appropriate classification heads, and saves:
+- `models/best_model.keras` - Best Stage 1 model
+- `models/best_model_finetuned.keras` - Best Stage 2 model
+- `models/final_model.keras` - Final snapshot
+- `models/class_names.json` - Class labels for dynamic UI
+- `models/metrics_*.json` - Per-model test accuracies
 
 ### Using a different dataset (e.g., 17 classes)
 
@@ -366,7 +436,7 @@ Dense(17, Softmax)  # Output probabilities for 17 classes
 
 Our training employs a two-stage approach for optimal results:
 
-#### Stage 1: Feature Extraction (20-30 epochs)
+#### Stage 1: Feature Extraction (50 epochs)
 
 ```python
 # Freeze base model weights
@@ -387,7 +457,7 @@ base_model.trainable = False
 - Training accuracy reaches ~85-90%
 - Validation accuracy follows training
 
-#### Stage 2: Fine-Tuning (10-20 epochs)
+#### Stage 2: Fine-Tuning (70 epochs)
 
 ```python
 # Unfreeze last N layers
@@ -395,19 +465,19 @@ for layer in base_model.layers[-20:]:
     layer.trainable = True
 
 # Fine-tune with lower learning rate
-# Learning Rate: 0.0001
+# Learning Rate: 0.0005
 # Optimizer: Adam
 ```
 
 **Purpose:**
 - Adapt pre-trained features to medical images
 - Learn domain-specific patterns
-- Squeeze out final accuracy points
+- Squeeze out final accuracy points (can achieve 92%+ with proper tuning)
 
 **Expected Behavior:**
 - Slower but steady improvement
-- Modest gains from fine-tuning (watch validation metrics)
-- Slight overfitting is normal; use early stopping and LR schedule
+- Significant gains from fine-tuning (8-10% improvement typical)
+- Early stopping and LR reduction on plateau prevent overfitting
 
 ### Loss Function
 

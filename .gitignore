@@ -25,6 +25,7 @@ wheels/
 venv/
 ENV/
 env/
+learn/
 
 # IDE
 .vscode/
@@ -33,38 +34,44 @@ env/
 *.swo
 *~
 
-# Data
+# Data (exclude large datasets)
 data/
 datasets/
 !data/.gitkeep
 *.nii
 *.nii.gz
-*.h5
-*.hdf5
-models/*.h5
-models/*.keras
-models/*.pb
-!models/.gitkeep
 
-# Logs
+# Logs and temporary files (exclude training logs)
 logs/
 *.log
+training_log.txt
+nohup.out
+/tmp/
+cache/
+
+# Archives
 *.zip
 *.7z
 *.tar
 *.tar.gz
 *.tgz
 *.bz2
-*.DS_Store
+
+# OS
+.DS_Store
 Thumbs.db
 
 # Jupyter Notebooks
 .ipynb_checkpoints
 *.ipynb
 
-# OS
-.DS_Store
-Thumbs.db
-
 # Streamlit
 .streamlit/secrets.toml
+
+# IMPORTANT: Include models directory and all trained models for distribution
+# Users can download and use these pre-trained models immediately
+!models/
+!models/**/*.keras
+!models/**/*.h5
+!models/**/*.json
+!models/.gitkeep
