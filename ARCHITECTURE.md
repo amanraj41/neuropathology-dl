@@ -1,21 +1,20 @@
 # 🏗️ System Architecture Documentation
 
-This document provides a detailed technical overview of the Neuropathology Detection System architecture.
+Technical overview of the Neuropathology Detection System architecture.
 
 ## Table of Contents
 
 1. [System Overview](#system-overview)
 2. [Architecture Layers](#architecture-layers)
-3. [Component Details](#component-details)
-4. [Data Flow](#data-flow)
-5. [Model Architecture](#model-architecture)
+3. [Model Architecture](#model-architecture)
+4. [Grad-CAM Implementation](#grad-cam-implementation)
+5. [Data Flow](#data-flow)
 6. [Training Pipeline](#training-pipeline)
 7. [Inference Pipeline](#inference-pipeline)
-8. [Design Decisions](#design-decisions)
 
 ## System Overview
 
-The system is built with a modular, layered architecture following software engineering best practices:
+Modular, layered architecture following software engineering best practices:
 
 - **Separation of Concerns**: Each module has a single responsibility
 - **Modularity**: Components can be replaced or upgraded independently
@@ -30,8 +29,7 @@ The system is built with a modular, layered architecture following software engi
 | Backend | Python | Application logic |
 | ML Framework | TensorFlow/Keras | Deep learning model |
 | Data Processing | NumPy, Pillow, OpenCV | Image preprocessing |
-| Visualization | Matplotlib, Plotly, Seaborn | Charts and plots |
-| Deployment | (Configurable) | Docker, Cloud platforms |
+| Visualization | Matplotlib, Plotly, Seaborn | Charts and Grad-CAM overlays |
 
 ## Architecture Layers
 
@@ -41,32 +39,29 @@ The system is built with a modular, layered architecture following software engi
 
 **Responsibilities**:
 - User interface rendering
-- Input handling (image uploads)
-- Result visualization
-- Educational content presentation
+- Model selection and switching
+- Input handling (image uploads, URL fetch)
+- Grad-CAM controls (sensitivity, intensity sliders)
+- Result visualization with color-coded classes
+- Clinical information presentation
 
 **Components**:
 - Home page with project overview
-- Detection page with image upload
-- Model information page
-- Theory/documentation pages
+- Diagnostic Classes page with 17 neuropathology categories
+- Detection page with Grad-CAM integration
+- About Model page with performance metrics
 
-**Technologies**: Streamlit, Plotly, HTML/CSS
+**Technologies**: Streamlit, Plotly, HTML/CSS, OpenCV (for Grad-CAM overlays)
 
 ### 2. Application Layer
 
-**Files**: `train.py`, `demo.py`
+**Files**: `train.py`, `validate.py`
 
 **Responsibilities**:
-- Training orchestration
-- Model evaluation
-- Demo/testing utilities
+- Training orchestration (two-stage transfer learning)
+- Model evaluation and metrics computation
+- Validation utilities
 - CLI interfaces
-
-**Components**:
-- Training script with argument parsing
-- Demo script for testing
-- Validation script for CI/CD
 
 ### 3. Model Layer
 
@@ -77,19 +72,14 @@ The system is built with a modular, layered architecture following software engi
 - Model compilation and configuration
 - Training callbacks
 - Prediction interface
+- Grad-CAM computation
 
 **Key Classes**:
 - `NeuropathologyModel`: Main model wrapper
-  - `build_model()`: Constructs architecture
+  - `build_model()`: Constructs MobileNetV2 + custom head
   - `compile_model()`: Configures optimizer and loss
-  - `fine_tune_model()`: Enables fine-tuning
+  - `fine_tune_model()`: Enables fine-tuning of last 20 layers
   - `predict()`: Makes predictions
-
-**Supported Architectures**:
-1. EfficientNetB0 (default)
-2. ResNet50
-3. VGG16
-4. MobileNetV2
 
 ### 4. Data Layer
 
@@ -103,116 +93,129 @@ The system is built with a modular, layered architecture following software engi
 
 **Key Classes**:
 - `MRIDataLoader`: Image preprocessing
-  - `load_and_preprocess_image()`: Single image
-  - `load_batch()`: Batch processing
-  - `augment_image()`: Data augmentation
-
-- `DataGenerator`: Training data generator
-  - Inherits from `tf.keras.utils.Sequence`
-  - On-the-fly loading for memory efficiency
-  - Automatic shuffling and batching
+  - `load_and_preprocess_image()`: Single image processing
+  - Resizing to 224×224
+  - Normalization to [0, 1]
 
 ### 5. Utility Layer
 
 **Directory**: `src/utils/`
 
 **Responsibilities**:
-- Visualization utilities
-- Model evaluation
+- Class name management
+- Clinical descriptions
+- MRI findings
 - Helper functions
-- Constants and configurations
 
-**Key Classes**:
-- `Visualizer`: Plotting utilities
-  - Training history plots
-  - Confusion matrices
-  - Prediction confidence charts
+## Model Architecture
 
-- `ModelEvaluator`: Evaluation metrics
-  - Accuracy, precision, recall, F1
-  - Confusion matrix computation
-  - Classification reports
-
-## Component Details
-
-### NeuropathologyModel Class
-
-```python
-class NeuropathologyModel:
-    """
-    Main model wrapper that encapsulates:
-    - Base model selection and loading
-    - Custom classification head
-    - Two-stage training support
-    - Prediction interface
-    """
-```
-
-**Architecture Flow**:
+### MobileNetV2 Base
 
 ```
 Input (224, 224, 3)
     ↓
-Base Model (Pre-trained)
+MobileNetV2 (Pre-trained on ImageNet)
+  - 154 layers
+  - Depthwise separable convolutions
+  - Inverted residual blocks
+  - Output: 7×7×1280 feature maps
     ↓
-Global Average Pooling
+Last Conv Layer: Conv_1 (7×7×1280) ← Used for Grad-CAM
+    ↓
+Global Average Pooling (1280)
+```
+
+### Custom Classification Head
+
+```python
+Global Average Pooling (1280 → 1280)
     ↓
 Batch Normalization
     ↓
-Dense(512) + ReLU
+Dense(512, ReLU)
     ↓
 Dropout(0.5)
     ↓
-Dense(256) + ReLU
+Dense(256, ReLU)
     ↓
 Batch Normalization
     ↓
 Dropout(0.3)
     ↓
-Dense(4) + Softmax
-    ↓
-Output (4 class probabilities)
+Dense(17, Softmax)  # Output probabilities for 17 classes
 ```
 
-**Design Rationale**:
+**Total Parameters**: ~3.05M
+- Base model (frozen in stage 1): ~2.26M
+- Classification head: ~0.79M
+- Fine-tuning (stage 2): Last 20 layers unfrozen
 
-1. **Pre-trained Base**: Leverages ImageNet knowledge
-2. **Global Average Pooling**: Reduces parameters, spatial invariance
-3. **Batch Normalization**: Stabilizes training, faster convergence
-4. **Dense Layers**: Learn classification from extracted features
-5. **Dropout**: Prevents overfitting, improves generalization
-6. **Softmax Output**: Probability distribution over classes
+## Grad-CAM Implementation
 
-### Data Processing Pipeline
+### Algorithm Overview
 
+**Gradient-weighted Class Activation Mapping (Grad-CAM)**:
+1. Forward pass through model
+2. Compute gradients of predicted class w.r.t. last conv layer (Conv_1)
+3. Global average pool gradients to get importance weights
+4. Weight conv layer activations by importance
+5. Apply ReLU and normalize to [0, 1]
+6. Resize heatmap to input size (224×224)
+7. Apply JET colormap and alpha blend with original image
+8. Detect regions above threshold and draw contours
+
+### Implementation in app.py
+
+```python
+def _compute_gradcam_overlay(self, img_array, predicted_class):
+    # Get settings from sidebar
+    threshold = st.session_state.get('gradcam_threshold', 0.5)
+    alpha = st.session_state.get('gradcam_alpha', 0.35)
+    
+    # Build Grad-CAM model (base_model.input → [conv_output, final_output])
+    gradcam_model = tf.keras.Model(
+        inputs=base_model_input,
+        outputs=[conv_layer_output, final_output]
+    )
+    
+    # Compute gradients
+    with tf.GradientTape() as tape:
+        conv_outputs, predictions = gradcam_model(img_tensor, training=False)
+        class_channel = predictions[0, predicted_class]
+    
+    grads = tape.gradient(class_channel, conv_outputs)
+    
+    # Generate heatmap
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+    heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs[0]), axis=-1)
+    heatmap = tf.nn.relu(heatmap)
+    heatmap = heatmap / tf.reduce_max(heatmap)
+    
+    # Resize and colorize
+    heatmap_resized = cv2.resize(heatmap.numpy(), (224, 224))
+    heatmap_colored = cv2.applyColorMap((heatmap_resized * 255).astype('uint8'), cv2.COLORMAP_JET)
+    
+    # Blend and draw contours
+    overlay = cv2.addWeighted(base_img, 1.0 - alpha, heatmap_colored, alpha, 0)
+    cv2.drawContours(overlay, contours_filtered, -1, (0, 255, 0), 2)
+    
+    return {'overlay_rgb': overlay_rgb, 'mask_any': regions_detected, 'debug_info': stats}
 ```
-Raw MRI Image
-    ↓
-Load Image (PIL)
-    ↓
-Resize to 224×224 (bilinear interpolation)
-    ↓
-Convert to NumPy array
-    ↓
-Normalize to [0, 1]
-    ↓
-[Optional] Data Augmentation
-    ↓
-Batch Assembly
-    ↓
-Model Input
-```
 
-**Data Augmentation** (Training only):
-- Random rotation: ±20°
-- Random zoom: ±10%
-- Horizontal flip: 50% probability
+### Real-time Updates
 
-**Mathematical Operations**:
-- Normalization: `x_norm = x / 255.0`
-- Rotation: Apply affine transformation matrix
-- Zoom: Scale coordinates by random factor
-- Flip: Mirror image across vertical axis
+**Key Innovation**: Cached `img_array` in `analysis_results`
+- Store preprocessed image during initial analysis
+- Regenerate Grad-CAM overlay when sliders change
+- No model prediction needed (fast ~100ms vs ~1-2s)
+- Seamless user experience
+
+### Visual Output
+
+- **Heatmap**: JET colormap (red=high activation, yellow=medium, blue=low)
+- **Contours**: Green borders around regions above threshold
+- **Alpha Blending**: Configurable transparency (0.1-0.8)
+- **Sensitivity**: Threshold controls which regions are highlighted (0.1-0.9)
 
 ## Data Flow
 
@@ -223,162 +226,107 @@ Dataset Directory
     ↓
 [Load image paths and labels]
     ↓
-[Train/Val/Test split]
+[Train/Val/Test split (70/15/15)]
     ↓
-DataGenerator (with augmentation)
+Data Augmentation (training only)
+  - Rotation ±20°
+  - Zoom ±10%
+  - Horizontal flip 50%
     ↓
 Model.fit()
-    ├─→ Forward pass
-    ├─→ Loss calculation
-    ├─→ Backpropagation
-    ├─→ Weight update
-    └─→ Validation
+  ├─→ Stage 1: Feature Extraction (50 epochs, LR=0.001)
+  │     - Freeze base model
+  │     - Train classification head only
+  └─→ Stage 2: Fine-Tuning (70 epochs, LR=0.0005)
+        - Unfreeze last 20 layers
+        - Fine-tune entire model
     ↓
 [Callbacks]
-    ├─→ ModelCheckpoint (save best)
-    ├─→ EarlyStopping (prevent overfit)
-    ├─→ ReduceLROnPlateau (adaptive LR)
-    └─→ TensorBoard (logging)
+  ├─→ ModelCheckpoint (save best based on val_accuracy)
+  ├─→ EarlyStopping (patience=10, restore best weights)
+  ├─→ ReduceLROnPlateau (factor=0.5, patience=5)
+  └─→ TensorBoard (logging)
     ↓
-Trained Model
+Saved Models:
+  - best_model.keras (Stage 1)
+  - best_model_finetuned.keras (Stage 2)
+  - final_model.keras (final snapshot)
+  - class_names.json (labels)
+  - metrics.json (test accuracy)
 ```
 
 ### Inference Flow
 
 ```
-User Upload (Web UI)
+User Upload/URL (Web UI)
     ↓
 Temporary Save
     ↓
 MRIDataLoader.load_and_preprocess_image()
-    ├─→ Resize
-    ├─→ Normalize
-    └─→ Format
+  ├─→ Resize to 224×224
+  ├─→ Normalize to [0, 1]
+  └─→ Convert to NumPy array
     ↓
 np.expand_dims() [Add batch dimension]
     ↓
 Model.predict()
-    ├─→ Forward pass only
-    ├─→ No gradient computation
-    └─→ No dropout
+  ├─→ Forward pass (no dropout)
+  └─→ Softmax probabilities
     ↓
-Softmax Probabilities
-    ├─→ Class predictions
-    ├─→ Confidence scores
-    └─→ All class probabilities
+Store in session_state:
+  - predictions (all 17 class probabilities)
+  - predicted_class (argmax)
+  - confidence (max probability)
+  - class_name (from class_names.json)
+  - img_array (for Grad-CAM caching)
     ↓
-Visualization
-    ├─→ Bar chart
-    ├─→ Class description
-    └─→ Warning if low confidence
+[If Grad-CAM enabled]
+_compute_gradcam_overlay(img_array, predicted_class)
+  ├─→ Build Grad-CAM model
+  ├─→ Compute gradients
+  ├─→ Generate heatmap
+  ├─→ Detect regions above threshold
+  └─→ Draw overlay with contours
     ↓
-Display to User
+Display:
+  - Predicted class with color coding
+  - Confidence score with status (High/Moderate/Low)
+  - Grad-CAM overlay (if regions detected)
+  - Probability distribution chart (Plotly)
+  - Clinical description
+  - MRI findings
 ```
-
-## Model Architecture
-
-### Base Models Comparison
-
-| Model | Parameters | Size | Speed | Accuracy | Best For |
-|-------|-----------|------|-------|----------|----------|
-| EfficientNetB0 | ~5.3M | 21 MB | Medium | Highest | **Production** (recommended) |
-| ResNet50 | ~25.6M | 98 MB | Medium | High | High accuracy needs |
-| VGG16 | ~138M | 528 MB | Slow | Good | Learning/baseline |
-| MobileNetV2 | ~3.5M | 14 MB | Fast | Good | **Mobile/Edge devices** |
-
-### Classification Head Design
-
-```python
-# Feature extraction from base model
-# Output shape: (batch, 7, 7, channels)
-
-GlobalAveragePooling2D()
-# Output: (batch, channels)
-# Reduces spatial dimensions dramatically
-
-BatchNormalization()
-# Normalizes features
-# Stabilizes training
-
-Dense(512, activation='relu')
-# First fully connected layer
-# Learns feature combinations
-
-Dropout(0.5)
-# Prevents overfitting
-# 50% dropout rate
-
-Dense(256, activation='relu')
-# Second fully connected layer
-# Additional learning capacity
-
-BatchNormalization()
-# Second normalization
-
-Dropout(0.3)
-# Lower dropout for deeper layer
-
-Dense(4, activation='softmax')
-# Output layer
-# 4 class probabilities
-```
-
-**Total Parameters (EfficientNetB0)**:
-- Base model: ~5.3M parameters
-- Classification head: ~2.1M parameters
-- **Total**: ~7.4M parameters
 
 ## Training Pipeline
 
-### Two-Stage Training Strategy
+### Two-Stage Strategy
 
-#### Stage 1: Feature Extraction (20-30 epochs)
+#### Stage 1: Feature Extraction (50 epochs)
 
 **Configuration**:
 ```python
-base_model.trainable = False  # Freeze all base layers
+base_model.trainable = False  # Freeze all MobileNetV2 layers
 learning_rate = 0.001
 optimizer = Adam
-batch_size = 32
-epochs = 30
+batch_size = 16
 ```
 
-**Purpose**:
-- Train only the new classification layers
-- Learn task-specific features on top of general features
-- Faster convergence (fewer parameters to update)
+**Purpose**: Train classification head without destroying pre-trained weights
 
-**Expected Progress**:
-```
-Epoch 1:  Loss: 1.20  Acc: 0.60
-Epoch 10: Loss: 0.45  Acc: 0.83
-Epoch 20: Loss: 0.28  Acc: 0.88
-Epoch 30: Loss: 0.20  Acc: 0.91
-```
-
-#### Stage 2: Fine-Tuning (10-20 epochs)
+#### Stage 2: Fine-Tuning (70 epochs)
 
 **Configuration**:
 ```python
-base_model.trainable = True
-# Freeze first N layers, unfreeze last M layers
-learning_rate = 0.0001  # Lower!
+# Unfreeze last 20 layers
+for layer in base_model.layers[-20:]:
+    layer.trainable = True
+
+learning_rate = 0.0005  # Lower LR crucial!
 optimizer = Adam
-batch_size = 32
-epochs = 20
+batch_size = 16
 ```
 
-**Purpose**:
-- Adapt pre-trained features to medical images
-- Learn domain-specific low-level features
-- Squeeze out final accuracy points
-
-**Expected Progress**:
-```
-Epoch 1:  Loss: 0.18  Acc: 0.92
-Epoch 10: Loss: 0.12  Acc: 0.95
-Epoch 20: Loss: 0.10  Acc: 0.96
-```
+**Purpose**: Adapt pre-trained features to medical imaging domain
 
 ### Loss Function
 
@@ -387,269 +335,122 @@ Epoch 20: Loss: 0.10  Acc: 0.96
 L = -Σᵢ yᵢ log(ŷᵢ)
 
 where:
-- yᵢ: true label (one-hot)
+- yᵢ: true label (one-hot encoded)
 - ŷᵢ: predicted probability
 ```
 
-**Properties**:
-- Convex (single global minimum)
-- Differentiable (enables gradient descent)
-- Penalizes confident wrong predictions heavily
-- Perfect when ŷ = y (loss = 0)
+### Regularization
 
-### Optimization
-
-**Adam Optimizer**:
-```
-Parameters:
-- learning_rate: 0.001 (stage 1), 0.0001 (stage 2)
-- beta1: 0.9 (momentum)
-- beta2: 0.999 (adaptive learning rate)
-- epsilon: 1e-8
-```
-
-**Why Adam?**:
-- Adaptive per-parameter learning rates
-- Momentum helps escape saddle points
-- Works well with sparse gradients
-- Robust to hyperparameter choices
-- Industry standard for deep learning
-
-### Callbacks
-
-```python
-ModelCheckpoint:
-    monitor = 'val_accuracy'
-    save_best_only = True
-    # Keeps only best performing model
-
-EarlyStopping:
-    monitor = 'val_loss'
-    patience = 10
-    restore_best_weights = True
-    # Stops if no improvement for 10 epochs
-
-ReduceLROnPlateau:
-    monitor = 'val_loss'
-    factor = 0.5
-    patience = 5
-    # Halves LR if plateau for 5 epochs
-
-TensorBoard:
-    log_dir = 'logs'
-    histogram_freq = 1
-    # Logs metrics for visualization
-```
+1. **Dropout (0.5, 0.3)**: Prevents overfitting
+2. **Batch Normalization**: Stabilizes training, acts as regularization
+3. **Data Augmentation**: Increases dataset diversity
+4. **Early Stopping**: Monitors val_loss, patience=10
+5. **L2 Regularization**: Implicit in Adam optimizer
 
 ## Inference Pipeline
 
 ### Prediction Steps
 
-1. **Preprocessing**:
-   ```python
-   image = load_image(path)
-   image = resize(image, (224, 224))
-   image = normalize(image)  # [0, 1]
-   image = expand_dims(image, 0)  # Add batch dimension
-   ```
+1. **Preprocessing**: Resize (224×224), normalize [0, 1], add batch dimension
+2. **Forward Pass**: model.predict() with dropout disabled
+3. **Post-processing**: argmax for class, max for confidence
+4. **Grad-CAM** (if enabled): Compute heatmap, detect regions, draw overlay
+5. **Visualization**: Plotly charts, color-coded classes, clinical info
 
-2. **Forward Pass**:
-   ```python
-   predictions = model.predict(image)
-   # No backprop, no gradient computation
-   # Dropout layers disabled
-   # Batch norm uses running statistics
-   ```
+### Performance
 
-3. **Post-processing**:
-   ```python
-   class_idx = argmax(predictions)
-   confidence = max(predictions)
-   all_probs = predictions[0]
-   ```
+**Inference Time** (CPU):
+- Model prediction: ~1-2 seconds
+- Grad-CAM computation: ~100-200ms
+- Total: ~1.2-2.2 seconds
 
-4. **Visualization**:
-   - Bar chart of all class probabilities
-   - Highlighted predicted class
-   - Confidence threshold checking
-   - Class description display
+**Memory Usage**:
+- Model: ~500 MB
+- Single image: ~6 MB
+- Grad-CAM temp tensors: ~50 MB
+- **Total**: ~556 MB
 
-## Design Decisions
+## Key Design Decisions
 
-### 1. Why Transfer Learning?
+### 1. Why MobileNetV2?
 
-**Problem**: Training from scratch requires:
-- Millions of labeled images
-- Weeks of training time
-- Massive computational resources
-
-**Solution**: Transfer learning
-- Pre-trained on ImageNet (1.2M images)
-- General features transfer to medical images
-- Faster convergence, better accuracy
+- Efficient depthwise separable convolutions
+- Small parameter count (~2.26M base)
+- Fast inference suitable for web deployment
+- Proven performance on medical images
+- Pre-trained on ImageNet (strong feature extractor)
 
 ### 2. Why Two-Stage Training?
 
-**Alternative**: Train everything together
-
-**Our Approach**: Two stages
-1. First train new layers
-2. Then fine-tune base model
-
-**Benefits**:
-- New layers stabilize first
 - Prevents destroying pre-trained weights
-- Better final accuracy
-- More stable training
+- New layers stabilize first before fine-tuning
+- Better final accuracy (8-10% improvement typical)
+- More stable training process
 
-### 3. Why Multiple Model Options?
+### 3. Why Grad-CAM?
 
-Different use cases need different models:
-- **Research/Learning**: VGG16 (simple architecture)
-- **Production**: EfficientNet (best accuracy/speed)
-- **Mobile**: MobileNetV2 (smallest, fastest)
-- **High Accuracy**: ResNet50 (deep network)
+- Provides visual explanations for model decisions
+- Builds trust through transparency
+- Helps validate predictions
+- Useful for identifying potential tumor locations
+- Real-time updates enhance user experience
 
 ### 4. Why Global Average Pooling?
 
-**Alternative**: Flatten layer
-
-**Our Choice**: GAP
-- Much fewer parameters (prevents overfitting)
+- Much fewer parameters than Flatten (prevents overfitting)
 - Spatial invariance (position doesn't matter)
 - Better generalization
 - Standard in modern architectures
 
-### 5. Why Data Augmentation?
+### 5. Why Batch Normalization?
 
-**Problem**: Limited medical image data
-
-**Solution**: Augmentation
-- Artificially increases dataset size
-- Improves generalization
-- Makes model robust to variations
-- No cost (just transformations)
-
-### 6. Why Batch Normalization?
-
-**Benefits**:
 - Normalizes activations between layers
 - Allows higher learning rates
-- Reduces internal covariate shift
-- Acts as regularization
 - Faster convergence
+- Acts as regularization
 
-### 7. Why Dropout?
+### 6. Why Dropout?
 
-**Problem**: Overfitting on small datasets
-
-**Solution**: Dropout
-- Randomly deactivates neurons
+- Simple and effective regularization
 - Forces redundant representations
-- Prevents co-adaptation
-- Simple and effective
+- Prevents co-adaptation of features
+- Critical for small medical datasets
 
-## Performance Considerations
+### 7. Why Real-time Grad-CAM Updates?
 
-### Memory Usage
-
-**Training**:
-- Model: ~500 MB (GPU memory)
-- Batch (32 images): ~200 MB
-- Gradients: ~500 MB
-- **Total**: ~1.2 GB GPU memory minimum
-
-**Inference**:
-- Model: ~500 MB
-- Single image: ~6 MB
-- **Total**: ~512 MB
-
-### Speed Benchmarks
-
-**Training** (EfficientNetB0, RTX 3090):
-- Batch (32 images): ~0.5 seconds
-- Epoch (~1000 images): ~15 seconds
-- Full training (50 epochs): ~12 minutes
-
-**Inference** (CPU):
-- Single image: ~200 ms
-- Batch (32 images): ~2 seconds
-
-**Inference** (GPU):
-- Single image: ~50 ms
-- Batch (32 images): ~200 ms
-
-### Optimization Tips
-
-**For Training**:
-1. Use GPU (10-20x faster)
-2. Larger batch size (better GPU utilization)
-3. Mixed precision training (2x faster)
-4. Use MobileNet for quick experiments
-
-**For Inference**:
-1. Batch predictions when possible
-2. Use TensorFlow Lite for mobile
-3. Quantization for edge devices
-4. Model pruning for smaller size
+- Caching preprocessed img_array avoids re-prediction
+- Slider changes update overlay instantly (~100ms)
+- Better user experience
+- Allows experimentation with different thresholds
 
 ## Extensibility
 
-### Adding New Models
-
-```python
-# In src/models/neuropathology_model.py
-def _get_base_model(self):
-    if self.base_model_name == 'new_model':
-        base_model = NewModel(
-            include_top=False,
-            weights='imagenet',
-            input_shape=self.input_shape
-        )
-    # ...
-```
-
 ### Adding New Features
 
-1. **Grad-CAM Visualization**:
-   - Add to `Visualizer` class
-   - Shows which regions influence predictions
-
-2. **Ensemble Models**:
-   - Create `EnsembleModel` class
-   - Combine multiple architectures
-
-3. **Active Learning**:
-   - Add uncertainty estimation
-   - Prioritize uncertain samples for labeling
+1. **Tumor Segmentation**: Extend Grad-CAM to produce binary masks
+2. **Multi-modal Fusion**: Combine T1, T1C+, T2 sequences
+3. **3D CNN**: Process volumetric MRI data
+4. **Uncertainty Quantification**: Add dropout at inference for confidence intervals
+5. **Ensemble Models**: Combine multiple architectures for better accuracy
 
 ### Deployment Options
 
-1. **Docker Container**:
-   ```dockerfile
-   FROM tensorflow/tensorflow:latest
-   COPY . /app
-   RUN pip install -r requirements.txt
-   CMD ["streamlit", "run", "app.py"]
-   ```
-
-2. **Cloud Platforms**:
-   - AWS SageMaker
-   - Google Cloud AI Platform
-   - Azure ML
-
-3. **Mobile/Edge**:
-   - Convert to TensorFlow Lite
-   - Optimize with quantization
-   - Deploy on mobile devices
+1. **Docker Container**: Package entire app with dependencies
+2. **Cloud Platforms**: Deploy on AWS SageMaker, Google AI Platform, Azure ML
+3. **Mobile/Edge**: Convert to TensorFlow Lite, optimize with quantization
+4. **REST API**: Create Flask/FastAPI backend for integration
 
 ## Conclusion
 
 This architecture provides:
 - **Modularity**: Easy to modify and extend
-- **Scalability**: Can handle large datasets
-- **Performance**: Fast training and inference
+- **Performance**: Fast inference (~1-2s on CPU)
+- **Explainability**: Grad-CAM visual explanations
+- **Usability**: Interactive web interface
 - **Maintainability**: Clear code structure
-- **Educational Value**: Well-documented for learning
 
-The design balances simplicity with power, making it suitable for both learning and production use.
+The design balances simplicity with power, making it suitable for production deployment and further research.
+
+---
+
+**Version 1.1 | © 2025**
