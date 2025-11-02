@@ -1,6 +1,6 @@
 # 🚀 Quick Start Guide
 
-This guide will help you get started with the Neuropathology Detection System quickly.
+Get started with the Neuropathology Detection System in minutes.
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ This will install:
 
 ## Usage Options
 
-### Option 1: Run the Web Application (Demo Mode)
+### Option 1: Run the Web Application
 
 The quickest way to see the system in action:
 
@@ -58,56 +58,30 @@ This will:
 - Start a web server at http://localhost:8501
 - Open your browser automatically
 - Show a modern interface for uploading and analyzing MRI images
-- Work in demo mode (random predictions for demonstration)
+- Load pre-trained models with 78.13% test accuracy
 
-**Note:** Demo mode doesn't require a trained model. For real predictions, you need to train a model first.
+**Features:**
+- Model selection dropdown
+- Image upload or URL fetch
+- Grad-CAM anomaly localization with adjustable sensitivity
+- Real-time predictions with confidence scores
+- Clinical descriptions for all 17 classes
 
-### Option 2: Run Validation Script
-
-To check if everything is set up correctly:
-
-```bash
-python validate.py
-```
-
-This will:
-- Check project structure
-- Validate Python syntax
-- Show project statistics
-- Verify documentation
-
-### Option 3: Run Demo Tests
-
-To test all components without a full dataset:
-
-```bash
-python demo.py
-```
-
-This will:
-- Test data loading
-- Test model building (all architectures)
-- Test predictions
-- Test visualizations
-- Show a summary of results
-
-**Requires:** All dependencies installed
-
-### Option 4: Train Your Own Model
+### Option 2: Train Your Own Model
 
 To train on actual MRI data:
 
 ```bash
-python train.py --data_dir /path/to/your/dataset --epochs_stage1 30 --epochs_stage2 20
+python train.py --data_dir ./data/brain_mri_17 --base_model mobilenet --epochs_stage1 50 --epochs_stage2 70
 ```
 
 **Requirements:**
-- A dataset organized in the proper format (see below)
-- GPU recommended (CPU training is very slow)
+- A dataset organized with one folder per class
+- GPU recommended (CPU training is slow)
 
 ## Dataset Format
 
-Your dataset should be organized with one folder per class (folder names become class labels):
+Your dataset should be organized with one folder per class:
 
 ```
 your_dataset/
@@ -124,12 +98,10 @@ your_dataset/
 
 ### Recommended Dataset
 
-**Kaggle Brain MRI 17-Class Dataset** (Used for this implementation)
+**Kaggle Brain MRI 17-Class Dataset**
 - 17 neuropathology classes across T1, T1C+, T2 modalities
 - Pre-processed and ready to use
 - Comprehensive clinical spectrum
-
-**Note**: This system's UI and clinical descriptions are tailored for the 17-class dataset. Using a different dataset requires updating `src/utils/helpers.py` to match your specific classes.
 
 To use:
 1. Download from Kaggle
@@ -143,27 +115,20 @@ To use:
 When you run `streamlit run app.py`, explore:
 
 - **Home Page**: Project overview and key features
-- **Detection Page**: Load trained model, upload MRI scans, get predictions with clinical info
-- **Detection Page**: Upload images and get predictions
-- **About Model Page**: Technical details and architecture
-- **Theory Page**: Learn deep learning concepts with detailed explanations
+- **Diagnostic Classes Page**: All 17 neuropathology categories with MRI modality explanations
+- **Detection Page**: Load models, upload images, get predictions with Grad-CAM overlays
+- **About Model Page**: Architecture details and performance metrics
 
-### 2. Code Structure
+### 2. Grad-CAM Explainability
 
-The codebase is organized for easy learning:
+The app includes visual explanations for model decisions:
 
-```
-src/
-├── models/neuropathology_model.py  # Model architecture with theory
-├── data/data_loader.py             # Data handling with explanations
-└── utils/helpers.py                # Visualization and evaluation
-```
-
-Each file contains:
-- Comprehensive docstrings
-- Mathematical explanations
-- Theory correlations
-- Code-to-concept mappings
+- **Heatmap Overlay**: Red/yellow areas show suspicious regions, blue shows normal
+- **Green Contours**: Boundaries of detected anomalous regions
+- **Adjustable Sliders**:
+  - Detection Sensitivity (0.1-0.9): Controls which regions are highlighted
+  - Overlay Intensity (0.1-0.8): Controls transparency of heatmap
+- **Real-time Updates**: Changes update instantly without re-analysis
 
 ### 3. Training Process
 
@@ -171,47 +136,18 @@ When training a model:
 
 1. **Stage 1: Feature Extraction**
    - Trains only the classification head
-   - Takes 20-30 epochs
+   - Takes 50 epochs
    - Reaches ~85-90% accuracy
 
 2. **Stage 2: Fine-Tuning**
-   - Fine-tunes last layers of base model
-   - Takes 10-20 epochs
-   - Final accuracy ~95%+
+   - Fine-tunes last 20 layers of base model
+   - Takes 70 epochs
+   - Final accuracy ~78%+
 
 3. **Monitoring**
    - Watch training curves in real-time
    - TensorBoard logs saved to `logs/`
    - Best model saved to `models/`
-
-## Learning Path
-
-This project is designed as a hands-on learning platform:
-
-1. **Start with the Web App**
-   - See the system in action
-   - Understand the problem domain
-   - Explore the UI and features
-
-2. **Read the Theory**
-   - Navigate to Theory page in the app
-   - Covers neural networks, CNNs, transfer learning
-   - Mathematical foundations explained
-
-3. **Explore the Code**
-   - Start with `src/models/neuropathology_model.py`
-   - Read inline documentation
-   - Correlate code with theory
-
-4. **Run Training**
-   - Get hands-on with actual training
-   - Understand the two-stage process
-   - Experiment with hyperparameters
-
-5. **Experiment**
-   - Try different architectures
-   - Adjust learning rates
-   - Implement improvements
 
 ## Common Issues
 
@@ -227,45 +163,27 @@ pip install -r requirements.txt
 ### Training is very slow
 
 - **Solution 1**: Use a machine with GPU
-- **Solution 2**: Reduce batch size: `--batch_size 16`
-- **Solution 3**: Use MobileNet: `--base_model mobilenet`
-- **Solution 4**: Reduce epochs: `--epochs_stage1 15 --epochs_stage2 10`
+- **Solution 2**: Reduce batch size: `--batch_size 16` or `--batch_size 8`
+- **Solution 3**: Reduce epochs: `--epochs_stage1 30 --epochs_stage2 20`
 
 ### Out of memory errors
 
-- Reduce batch size: `--batch_size 16` or even `--batch_size 8`
-- Use a smaller model: `--base_model mobilenet`
+- Reduce batch size: `--batch_size 8`
 - Close other applications
 
 ### Poor accuracy
 
 - Check data quality (corrupted images, wrong labels)
 - Increase training time (more epochs)
-- Try data augmentation
 - Ensure balanced dataset
 
 ## Next Steps
 
-1. **Complete the Tutorial**: Read through all theory sections in the app
-2. **Train a Model**: Get a dataset and train your first model
-3. **Experiment**: Try different architectures and hyperparameters
-4. **Extend**: Add new features like Grad-CAM visualizations
+1. **Explore the App**: Run `streamlit run app.py` and test with different MRI images
+2. **Train a Model**: Get the dataset and train your first model
+3. **Experiment**: Try different threshold values for Grad-CAM
+4. **Extend**: Add new features or improve the model
 5. **Deploy**: Consider deploying to cloud platforms
-
-## Getting Help
-
-- **Documentation**: Read the extensive README.md
-- **Code Comments**: All code is thoroughly documented
-- **Theory Pages**: In-depth explanations in the web app
-- **GitHub Issues**: Report bugs or ask questions
-
-## Important Notes
-
-⚠️ **Medical Disclaimer**: This is an educational tool. Do not use for actual medical diagnosis.
-
-🎓 **Learning Focus**: Take time to understand the theory. The goal is to learn deep learning fundamentals.
-
-💻 **Experimentation**: Don't hesitate to modify the code and try new ideas. That's how you learn!
 
 ## Summary of Commands
 
@@ -277,17 +195,21 @@ python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate
 pip install -r requirements.txt
 
-# Validation
-python validate.py
-
-# Demo
-python demo.py
-
 # Web App
 streamlit run app.py
 
 # Training
-python train.py --data_dir /path/to/data --epochs_stage1 30 --epochs_stage2 20
+python train.py --data_dir /path/to/data --epochs_stage1 50 --epochs_stage2 70
 ```
 
-Happy learning! 🧠🤖
+## Important Notes
+
+⚠️ **Medical Disclaimer**: This is a demonstration tool. Do not use for actual medical diagnosis.
+
+💻 **Experimentation**: Modify the code and try new ideas!
+
+📊 **Grad-CAM**: Adjust sliders to see how detection sensitivity affects visualization.
+
+---
+
+**Happy analyzing! 🧠🤖 | Version 1.1**

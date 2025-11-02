@@ -1,19 +1,18 @@
 # 🧠 Neuropathology Detection System
 
-A comprehensive deep learning system for detecting neuropathological conditions from brain MRI scans. This project combines state-of-the-art computer vision techniques with an intuitive web interface, designed as a practical reference implementation for medical image classification.
+A production-ready deep learning system for detecting neuropathological conditions from brain MRI scans with Grad-CAM explainability for anomaly localization.
 
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15-orange.svg)](https://tensorflow.org)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.16-orange.svg)](https://tensorflow.org)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.29-red.svg)](https://streamlit.io)
 
-**Created by**: Aman Raj | **Version**: 1.0 | **Year**: 2025
+**Created by**: Aman Raj | **Version**: 1.1 | **Year**: 2025
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Quick Start](#quick-start)
-- [System Architecture](#system-architecture)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Dataset](#dataset)
@@ -22,57 +21,53 @@ A comprehensive deep learning system for detecting neuropathological conditions 
 - [Web Application](#web-application)
 - [Project Structure](#project-structure)
 - [Results](#results)
-- [Future Work](#future-work)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## 🎯 Overview
 
-This project implements a complete neuropathology detection system powered by deep learning for medical image (MRI) analysis. It features:
+A comprehensive neuropathology detection system powered by deep learning for medical MRI analysis. Features:
 
-- **Flexible Base Models**: Supports MobileNetV2, EfficientNetB0, ResNet50, and VGG16
-- **Transfer Learning**: Leverages pre-trained models trained on ImageNet
-- **Fine-tuning**: Adapts general image features to medical imaging domain
-- **Modern Web Interface**: Interactive Streamlit application for real-time predictions
-- **Pre-trained Models**: Includes ready-to-use models (92.16% test accuracy with MobileNetV2)
-
+- **Transfer Learning**: MobileNetV2 pre-trained on ImageNet, fine-tuned for medical imaging
+- **17-Class Classification**: Gliomas, meningiomas, schwannomas, neurocytomas, lesions & normal scans
+- **Grad-CAM Explainability**: Visual explanations with real-time anomaly localization overlays
+- **Interactive Web Interface**: Streamlit application with model selection and real-time predictions
+- **Production-Ready**: Pre-trained models with 78.13% test accuracy included
 
 ### Detected Conditions
 
-The system can classify brain MRI scans into **17 distinct categories**, providing comprehensive neuropathological analysis across multiple imaging modalities (T1, T1C+, T2):
+The system classifies brain MRI scans into **17 distinct categories** across multiple imaging modalities (T1, T1C+, T2):
 
 **Primary Tumor Categories:**
-1-3. **Glioma** (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) - T1, T1C+, T2
-4-6. **Meningioma** (de Baixo Grau, Atípico, Anaplásico, Transicional) - T1, T1C+, T2
-7-8. **NORMAL** - T1, T2
-9-11. **Neurocitoma** (Central - Intraventricular, Extraventricular) - T1, T1C+, T2
-12-14. **Outros Tipos de Lesões** (Abscessos, Cistos, Encefalopatias Diversas) - T1, T1C+, T2
-15-17. **Schwannoma** (Acustico, Vestibular - Trigeminal) - T1, T1C+, T2
+- **Glioma** (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) - T1, T1C+, T2
+- **Meningioma** (de Baixo Grau, Atípico, Anaplásico, Transicional) - T1, T1C+, T2
+- **NORMAL** - T1, T2
+- **Neurocytoma** (Central - Intraventricular, Extraventricular) - T1, T1C+, T2
+- **Other Lesions** (Abscesses, Cysts, Encephalopathies) - T1, T1C+, T2
+- **Schwannoma** (Acustico, Vestibular - Trigeminal) - T1, T1C+, T2
 
 Each class includes detailed clinical information and characteristic MRI findings.
 
 ## ✨ Features
 
-### Technical Features
+### Core Features
 
-- **Flexible Base Models**: Choose from MobileNetV2, EfficientNetB0, ResNet50, or VGG16
-- **Transfer Learning**: Pre-trained models with ImageNet weights for faster convergence
-- **Two-Stage Training**: Feature extraction (50 epochs) + Fine-tuning (70 epochs, LR=0.0005)
-- **Data Augmentation**: Rotation, zoom, and flip transformations to improve generalization
-- **Comprehensive Metrics**: Accuracy, precision, recall, F1-score, AUC-ROC
-- **Model Callbacks**: Early stopping, learning rate scheduling, model checkpoints
-- **Visualization Tools**: Training curves, confusion matrices, prediction confidence
-- **Dynamic Evaluation**: Automatic test accuracy computation and per-model metrics
-- **Pre-trained Models Included**: Best finetuned model achieves 92.16% test accuracy
+- **MobileNetV2 Architecture**: Efficient depthwise separable convolutions optimized for medical imaging
+- **Two-Stage Training**: Feature extraction (50 epochs) + Fine-tuning (70 epochs)
+- **Data Augmentation**: Rotation, zoom, flip transformations for robust training
+- **Grad-CAM Visualization**: Real-time anomaly localization with adjustable sensitivity and intensity
+- **Comprehensive Metrics**: Accuracy, precision, recall, F1-score with per-class breakdowns
+- **Pre-trained Models**: Best finetuned model achieves 78.13% test accuracy (ready to deploy)
 
 ### User Interface Features
 
-- **Modern Web Design**: Clean, intuitive Streamlit interface
 - **Model Selection & Switching**: Load and compare different trained models dynamically
 - **Real-time Predictions**: Upload MRI images or fetch from URL for instant diagnosis
+- **Grad-CAM Overlays**: Interactive heatmaps highlighting suspicious regions with green contours
+- **Adjustable Detection**: Sensitivity and intensity sliders for fine-tuning anomaly localization
 - **Test Accuracy Display**: View model performance metrics directly in the UI
-- **Confidence Scores**: Detailed probability distributions for all 17 classes
-- **Clinical Information**: Comprehensive medical descriptions and MRI findings for each diagnosed pathology
+- **Confidence Scores**: Detailed probability distributions for all 17 classes with color-coded visualization
+- **Clinical Information**: Comprehensive medical descriptions and MRI findings for each pathology
 - **Interactive Visualizations**: Plotly charts for prediction analysis
 - **Responsive Layout**: Works on desktop and mobile devices
 
@@ -81,86 +76,40 @@ Each class includes detailed clinical information and characteristic MRI finding
 ### Option 1: Use Pre-trained Models (Recommended)
 
 1. **Clone the repository:**
-```bash
+\`\`\`bash
 git clone https://github.com/amanraj41/neuropathology-dl.git
 cd neuropathology-dl
-```
+\`\`\`
 
 2. **Install dependencies:**
-```bash
+\`\`\`bash
 pip install -r requirements.txt
-```
+\`\`\`
 
 3. **Run the app:**
-```bash
+\`\`\`bash
 streamlit run app.py
-```
+\`\`\`
 
-The app includes pre-trained models in the `models/` directory ready for immediate use!
+The app includes pre-trained models in the \`models/\` directory ready for immediate use!
 
 ### Option 2: Train Your Own Model
 
-If you have sufficient computational resources or want to experiment:
+If you want to experiment with different configurations:
 
 1. **Clone and install** (as above)
 
 2. **Prepare your dataset** (see [Dataset](#dataset) section)
 
 3. **Train the model:**
-```bash
+\`\`\`bash
 python train.py --data_dir ./data/brain_mri_17 --base_model mobilenet --epochs_stage1 50 --epochs_stage2 70
-```
+\`\`\`
 
 4. **Run the app:**
-```bash
+\`\`\`bash
 streamlit run app.py
-```
-
-## 🏗️ System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     User Interface Layer                      │
-│                    (Streamlit Web App)                        │
-│         - Model Selection & Switching                         │
-│         - Test Accuracy Display                               │
-│         - Image Upload & URL Fetch                            │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                    Application Layer                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Image Upload │  │  Prediction  │  │Visualization │      │
-│  │   Handler    │  │    Engine    │  │   Module     │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                  Deep Learning Layer                          │
-│  ┌──────────────────────────────────────────────────┐        │
-│  │       Pre-trained Base Model (Choose One)        │        │
-│  │    • MobileNetV2 (Default, Efficient)            │        │
-│  │    • EfficientNetB0 (Balanced)                   │        │
-│  │    • ResNet50 (Powerful)                         │        │
-│  │    • VGG16 (Classic)                             │        │
-│  └──────────────────────┬───────────────────────────┘        │
-│  ┌──────────────────────▼───────────────────────────┐        │
-│  │         Custom Classification Head               │        │
-│  │  GlobalAveragePooling → BatchNorm →              │        │
-│  │  Dense(512, ReLU) → Dropout(0.5) →               │        │
-│  │  Dense(256, ReLU) → BatchNorm → Dropout(0.3) →   │        │
-│  │  Dense(17, Softmax)                              │        │
-│  └──────────────────────────────────────────────────┘        │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                  Data Processing Layer                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │Image Loading │  │Preprocessing │  │ Augmentation │      │
-│  │              │  │ & Resizing   │  │ (Training)   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ## 🚀 Installation
 
@@ -172,36 +121,36 @@ streamlit run app.py
 
 ### Step 1: Clone the Repository
 
-```bash
+\`\`\`bash
 git clone https://github.com/amanraj41/neuropathology-dl.git
 cd neuropathology-dl
-```
+\`\`\`
 
 ### Step 2: Create Virtual Environment (Recommended)
 
-```bash
+\`\`\`bash
 # Create virtual environment
 python -m venv venv
 
 # Activate virtual environment
 # On Windows:
-venv\Scripts\activate
+venv\\Scripts\\activate
 # On Linux/Mac:
 source venv/bin/activate
-```
+\`\`\`
 
 ### Step 3: Install Dependencies
 
-```bash
+\`\`\`bash
 pip install -r requirements.txt
-```
+\`\`\`
 
 ### Step 4: Verify Installation
 
-```bash
+\`\`\`bash
 python -c "import tensorflow as tf; print('TensorFlow version:', tf.__version__)"
 python -c "import streamlit as st; print('Streamlit installed successfully')"
-```
+\`\`\`
 
 ## 📖 Usage
 
@@ -209,81 +158,55 @@ python -c "import streamlit as st; print('Streamlit installed successfully')"
 
 Start the Streamlit web interface:
 
-```bash
+\`\`\`bash
 streamlit run app.py
-```
+\`\`\`
 
-The application will open in your default browser at `http://localhost:8501`.
+The application will open in your default browser at \`http://localhost:8501\`.
+
+**Features Available:**
+- Load pre-trained models from dropdown
+- Upload MRI images or provide URLs
+- Enable/disable Grad-CAM anomaly localization
+- Adjust detection sensitivity (threshold)
+- Control overlay intensity (alpha)
+- View color-coded predictions with confidence scores
+- Access clinical descriptions and MRI findings
 
 ### Training a Model
 
 To train a model on your own dataset:
 
-```bash
-python train.py --data_dir /path/to/your/dataset --epochs_stage1 30 --epochs_stage2 20
-```
+\`\`\`bash
+python train.py --data_dir /path/to/your/dataset --epochs_stage1 50 --epochs_stage2 70
+\`\`\`
 
-Notes:
-- The dataset must be organized as one folder per class (subfolder names become class labels).
-- During training, the pipeline saves `models/class_names.json` and `models/metrics.json` so the app can display the correct labels and accuracy for any dataset size (e.g., 17 classes).
+**Training Arguments:**
 
-#### Training Arguments
-
-```bash
-python train.py \
-    --data_dir ./data/brain_mri_17 \    # Path to dataset
-    --base_model mobilenet \            # Base architecture: mobilenet, efficientnet, resnet50, vgg16
-    --batch_size 16 \                   # Batch size (16 recommended for CPU)
-    --epochs_stage1 50 \                # Feature extraction epochs
-    --epochs_stage2 70 \                # Fine-tuning epochs
-    --learning_rate 0.001 \             # Initial learning rate
-    --learning_rate_finetune 0.0005 \   # Fine-tuning learning rate (updated)
+\`\`\`bash
+python train.py \\
+    --data_dir ./data/brain_mri_17 \\    # Path to dataset
+    --base_model mobilenet \\            # Base architecture
+    --batch_size 16 \\                   # Batch size (16 for CPU)
+    --epochs_stage1 50 \\                # Feature extraction epochs
+    --epochs_stage2 70 \\                # Fine-tuning epochs
+    --learning_rate 0.001 \\             # Initial learning rate
+    --learning_rate_finetune 0.0005 \\   # Fine-tuning learning rate
     --trainable_layers 20               # Layers to fine-tune
-```
+\`\`\`
 
-**Supported Base Models:**
-- `mobilenet` - MobileNetV2 (Default, efficient, ~2.2M params)
-- `efficientnet` - EfficientNetB0 (Balanced accuracy/efficiency, ~4.0M params)
-- `resnet50` - ResNet50 (Powerful, ~23.5M params)
-- `vgg16` - VGG16 (Classic, ~14.7M params)
-
-The training script automatically handles base model selection, creates appropriate classification heads, and saves:
-- `models/best_model.keras` - Best Stage 1 model
-- `models/best_model_finetuned.keras` - Best Stage 2 model
-- `models/final_model.keras` - Final snapshot
-- `models/class_names.json` - Class labels for dynamic UI
-- `models/metrics_*.json` - Per-model test accuracies
-
-### Using a different dataset (e.g., 17 classes)
-
-1) Download and extract your dataset so it looks like:
-
-```
-data/your_dataset/
-├── ClassA/
-├── ClassB/
-└── ... (N class folders)
-```
-
-2) Train:
-
-```bash
-python train.py --data_dir data/your_dataset --base_model mobilenet --batch_size 16 --epochs_stage1 10 --epochs_stage2 5
-```
-
-3) Run the app:
-
-```bash
-streamlit run app.py
-```
-
-The app will auto-load `models/final_model.keras`, class names from `models/class_names.json`, and display metrics from `models/metrics.json` if present.
+The training script saves:
+- \`models/best_model.keras\` - Best Stage 1 model
+- \`models/best_model_finetuned.keras\` - Best Stage 2 model
+- \`models/final_model.keras\` - Final snapshot
+- \`models/class_names.json\` - Class labels for dynamic UI
+- \`models/metrics.json\` - Test accuracy and performance metrics
 
 ### Making Predictions
 
 #### Using Python Script
 
-```python
+\`\`\`python
 from src.models.neuropathology_model import NeuropathologyModel
 from src.data.data_loader import MRIDataLoader
 import numpy as np
@@ -302,13 +225,13 @@ predictions = model.predict(image_batch)
 predicted_class, confidence = model.predict_class(image_batch)
 
 print(f"Predicted: {predicted_class}, Confidence: {confidence}")
-```
+\`\`\`
 
 ## 📊 Dataset
 
 ### Expected Dataset Structure
 
-```
+\`\`\`
 data/brain_mri_17/
 ├── Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1/
 ├── Glioma (Astrocitoma, Ganglioglioma, Glioblastoma, Oligodendroglioma, Ependimoma) T1C+/
@@ -327,18 +250,15 @@ data/brain_mri_17/
 ├── Schwannoma (Acustico, Vestibular - Trigeminal) T1/
 ├── Schwannoma (Acustico, Vestibular - Trigeminal) T1C+/
 └── Schwannoma (Acustico, Vestibular - Trigeminal) T2/
-```
+\`\`\`
 
 ### Recommended Dataset
 
-**Kaggle Brain MRI 17-Class Dataset** (used for this implementation)
+**Kaggle Brain MRI 17-Class Dataset**
 - **17 neuropathology classes** across multiple MRI modalities
-- **Comprehensive clinical spectrum**: Primary tumors, benign lesions, normal scans, and diverse pathologies
+- **Comprehensive clinical spectrum**: Primary tumors, benign lesions, normal scans
 - **Multiple imaging modalities**: T1, T1 post-contrast (T1C+), T2-weighted sequences
 - **Pre-processed and ready to use**
-- **Source**: [Kaggle - Brain MRI Classification](https://www.kaggle.com/)
-
-**Note**: This system's clinical descriptions and MRI findings are specifically tailored for the 17-class dataset. Using a different dataset will require updating the class descriptions in `src/utils/helpers.py` to match your specific pathology classes.
 
 ### Data Preprocessing
 
@@ -354,9 +274,7 @@ The system automatically handles:
 
 ### Base Model: MobileNetV2
 
-Our system uses **MobileNetV2** as the pre-trained base model:
-
-```
+\`\`\`
 Parameters: ~2.26M (frozen during initial training)
 Architecture: Depthwise separable convolutions with inverted residuals
 Input: 224×224×3 RGB images
@@ -369,19 +287,12 @@ Key Advantages:
 - Fast inference suitable for deployment
 - Robust performance on smaller datasets
 - Pre-trained on ImageNet (1.4M images, 1000 classes)
-```
-
-**Why MobileNetV2?**
-- Optimal balance between accuracy and efficiency
-- Fewer parameters reduce overfitting on medical datasets
-- Depthwise separable convolutions are highly effective
-- Fast training and inference times
-- Proven performance in medical imaging applications
+\`\`\`
 
 ### Custom Classification Head
 
-```python
-MobileNetV2 Base (Frozen initially, then fine-tuned)
+\`\`\`python
+MobileNetV2 Base (Pre-trained, fine-tuned in stage 2)
     ↓
 Global Average Pooling (1280 → 1280)
     ↓
@@ -398,225 +309,172 @@ Batch Normalization
 Dropout(0.3)
     ↓
 Dense(17, Softmax)  # Output probabilities for 17 classes
-```
+\`\`\`
 
-**Total Parameters**: ~3.05M (791K trainable, 2.26M in base)
+**Total Parameters**: ~3.05M (791K trainable in stage 1, more in stage 2 after unfreezing)
 
-### Key Design Decisions
+### Grad-CAM Explainability
 
-**Global Average Pooling:**
-- Reduces spatial dimensions while preserving features
-- Much fewer parameters than Flatten
-- More robust to spatial translations
+**Gradient-weighted Class Activation Mapping (Grad-CAM):**
+- Generates visual explanations for CNN decisions
+- Highlights regions that contribute most to predictions
+- Uses gradients flowing into final convolutional layer (Conv_1)
+- Produces class-discriminative localization maps
+- Real-time overlay with adjustable sensitivity and intensity
 
-**Batch Normalization:**
-- Normalizes layer inputs
-- Stabilizes training
-- Allows higher learning rates
-- Acts as regularization
+**Implementation:**
+- Target layer: Conv_1 (last convolutional layer, 7×7×1280)
+- Heatmap colorization: JET colormap (red=high, blue=low)
+- Region detection: Binary thresholding + contour detection
+- Visual output: Alpha-blended overlay with green contour borders
 
-**Dropout:**
-- Prevents overfitting
-- Forces network to learn robust features
-- Different dropout rates (0.5, 0.3) for different layers
-
-**ReLU Activation:**
-- Non-linearity for learning complex patterns
-- No vanishing gradient problem
-- Computationally efficient
-
-**Softmax Output:**
-- Converts logits to probabilities
-- Outputs sum to 1.0
-- Ideal for multi-class classification
-
-## 🎓 Training Pipeline
+## �� Training Pipeline
 
 ### Two-Stage Training Strategy
 
-Our training employs a two-stage approach for optimal results:
-
 #### Stage 1: Feature Extraction (50 epochs)
 
-```python
+\`\`\`python
 # Freeze base model weights
 base_model.trainable = False
 
 # Train only classification head
 # Learning Rate: 0.001
 # Optimizer: Adam
-```
+\`\`\`
 
 **Purpose:**
 - Let new classification layers learn appropriate features
 - Prevent destroying pre-trained weights
 - Faster convergence
 
-**Expected Behavior:**
-- Rapid initial improvement
-- Training accuracy reaches ~85-90%
-- Validation accuracy follows training
-
 #### Stage 2: Fine-Tuning (70 epochs)
 
-```python
-# Unfreeze last N layers
+\`\`\`python
+# Unfreeze last 20 layers
 for layer in base_model.layers[-20:]:
     layer.trainable = True
 
 # Fine-tune with lower learning rate
 # Learning Rate: 0.0005
 # Optimizer: Adam
-```
+\`\`\`
 
 **Purpose:**
 - Adapt pre-trained features to medical images
 - Learn domain-specific patterns
-- Squeeze out final accuracy points (can achieve 92%+ with proper tuning)
-
-**Expected Behavior:**
-- Slower but steady improvement
-- Significant gains from fine-tuning (8-10% improvement typical)
-- Early stopping and LR reduction on plateau prevent overfitting
-
-### Loss Function
-
-**Categorical Cross-Entropy:**
-
-```
-L = -Σᵢ yᵢ log(ŷᵢ)
-```
-
-Where:
-- yᵢ: True label (one-hot encoded)
-- ŷᵢ: Predicted probability
-
-**Why This Loss?**
-- Standard for multi-class classification
-- Penalizes wrong predictions heavily
-- Differentiable (enables gradient descent)
-- Probabilistic interpretation
-
-### Optimization
-
-**Adam Optimizer:**
-- Adaptive learning rates per parameter
-- Combines momentum and RMSprop
-- Beta1 = 0.9 (momentum)
-- Beta2 = 0.999 (adaptive LR)
-- Epsilon = 1e-8 (numerical stability)
-
-**Learning Rate Schedule:**
-- ReduceLROnPlateau callback
-- Reduces LR by 0.5 when validation loss plateaus
-- Patience: 5 epochs
-- Minimum LR: 1e-7
+- Achieve optimal accuracy
 
 ### Regularization Techniques
 
-1. **Dropout (0.5, 0.3)**
-   - Randomly deactivates neurons during training
-   - Prevents co-adaptation of features
-
-2. **Batch Normalization**
-   - Normalizes layer inputs
-   - Reduces internal covariate shift
-
-3. **Data Augmentation**
-   - Rotation, zoom, flip
-   - Artificially increases dataset size
-
-4. **Early Stopping**
-   - Monitors validation loss
-   - Stops if no improvement for 10 epochs
-   - Restores best weights
-
-5. **L2 Regularization** (implicit in Adam)
-   - Penalizes large weights
-   - Encourages simpler models
+1. **Dropout (0.5, 0.3)** - Prevents overfitting
+2. **Batch Normalization** - Stabilizes training
+3. **Data Augmentation** - Increases dataset diversity
+4. **Early Stopping** - Monitors validation loss (patience=10)
+5. **L2 Regularization** - Implicit in Adam optimizer
 
 ### Training Callbacks
 
-```python
-ModelCheckpoint: Save best model
-EarlyStopping: Prevent overfitting
-ReduceLROnPlateau: Adaptive learning rate
+\`\`\`python
+ModelCheckpoint: Save best model based on validation accuracy
+EarlyStopping: Prevent overfitting, restore best weights
+ReduceLROnPlateau: Adaptive learning rate (factor=0.5, patience=5)
 TensorBoard: Visualization and logging
-```
+\`\`\`
 
 ## 💻 Web Application
 
 ### Features
 
 **1. Home Page**
-- Project overview
+- Project overview with Grad-CAM mention
 - Key features and capabilities
-- Quick statistics
+- Quick statistics and model information
 
-**2. Detection Page**
-- Image upload interface
-- Real-time prediction
-- Confidence scores for all classes
-- Detailed pathology descriptions
-- Interactive visualizations
+**2. Diagnostic Classes Page**
+- Complete list of 17 neuropathology classes
+- Color-coded class visualization
+- MRI modality explanations (T1, T1C+, T2)
+- Clinical resources and references
+- Grad-CAM explainability mention
 
-**3. About Model Page**
-- Architecture details
-- Training strategy explanation
-- Performance metrics
-- Dataset information
+**3. Detection Page**
+- Model selection dropdown with test accuracy display
+- Image upload interface or URL fetch
+- **Grad-CAM Controls:**
+  - Enable/disable toggle
+  - Detection sensitivity slider (0.1-0.9)
+  - Overlay intensity slider (0.1-0.8)
+- Real-time prediction with confidence scores
+- Anomaly localization overlay with colored heatmap and green contours
+- Detailed probability distribution for all classes
+- Clinical descriptions and MRI findings
 
-### User Interface Design
+**4. About Model Page**
+- MobileNetV2 architecture details
+- Two-stage training strategy explanation
+- Performance metrics (accuracy, precision, recall, F1-score)
+- Grad-CAM explainability section
+- Training hardware specifications
 
-**Color Scheme:**
-- Primary: Blue (#1f77b4) - Professional, trustworthy
-- Success: Green (#28a745) - Positive results
-- Warning: Yellow (#ffc107) - Low confidence alerts
-- Gradient backgrounds for emphasis
+### Grad-CAM Visualization
 
-**Layout:**
-- Responsive design (works on mobile)
-- Two-column layouts for efficiency
-- Card-based information presentation
-- Interactive Plotly charts
+**What You See:**
+- **Heatmap Overlay**: Red/yellow areas indicate high model activation (suspicious regions), blue areas indicate low activation
+- **Green Contours**: Boundaries of detected anomalous regions above the sensitivity threshold
+- **Normal Scans**: No overlay displayed for NORMAL class predictions
+- **Real-time Updates**: Adjust sensitivity and intensity sliders without re-analyzing
 
-**User Experience:**
-- Clear navigation sidebar
-- Progress indicators during processing
-- Informative error messages
-- Tooltips and help text
-- Visual feedback for all actions
+**Use Cases:**
+- Validate model decisions by seeing what regions influenced prediction
+- Identify potential tumor locations
+- Compare suspicious regions across different MRI modalities
+- Build trust through model transparency
 
 ## 📁 Project Structure
 
-```
+\`\`\`
 neuropathology-dl/
-├── app.py                          # Streamlit web application
+├── app.py                          # Streamlit web application (Grad-CAM integrated)
 ├── train.py                        # Model training script
+├── validate.py                     # Project validation script
 ├── requirements.txt                # Python dependencies
 ├── README.md                       # This file
+├── ARCHITECTURE.md                 # System architecture documentation
+├── QUICKSTART.md                   # Quick start guide
+├── LICENSE                         # MIT License
 ├── .gitignore                     # Git ignore rules
 │
 ├── src/                           # Source code
+│   ├── __init__.py
 │   ├── models/
+│   │   ├── __init__.py
 │   │   └── neuropathology_model.py # Model architecture
 │   ├── data/
+│   │   ├── __init__.py
 │   │   └── data_loader.py         # Data loading and preprocessing
 │   └── utils/
+│       ├── __init__.py
 │       └── helpers.py             # Utility functions
 │
-├── models/                        # Saved models (gitignored)
+├── models/                        # Saved models (included in repo)
 │   ├── .gitkeep
-│   └── final_model.keras
+│   ├── best_model_finetuned.keras # Pre-trained finetuned model
+│   ├── class_names.json           # Class label mappings
+│   └── metrics.json               # Model performance metrics
 │
-├── assets/                        # Images and resources
+├── scripts/                       # Utility scripts
+│   ├── check_training.sh
+│   ├── evaluate_models.py
+│   └── post_training_evaluation.sh
 │
-└── logs/                          # Training logs (gitignored)
-```
+└── data/                          # Dataset directory (excluded from repo)
+    └── brain_mri_17/              # 17-class MRI dataset
+\`\`\`
 
 ## 📈 Results
 
-### Achieved Performance (On Test Set)
+### Achieved Performance (Test Set)
 
 Trained on Kaggle Brain MRI 17-Class Dataset:
 
@@ -632,9 +490,9 @@ Trained on Kaggle Brain MRI 17-Class Dataset:
 | Class | F1-Score | Support |
 |-------|----------|---------|
 | NORMAL T1 | 97.56% | 41 |
-| Neurocitoma T1C+ | 96.20% | 39 |
+| Neurocytoma T1C+ | 96.20% | 39 |
 | Schwannoma T1C+ | 90.57% | 29 |
-| Outros Tipos de Lesões T1 | 90.48% | 23 |
+| Other Lesions T1 | 90.48% | 23 |
 | Meningioma T1C+ | 89.90% | 94 |
 | Glioma T1C+ | 89.44% | 76 |
 
@@ -644,96 +502,60 @@ Trained on Kaggle Brain MRI 17-Class Dataset:
 - Post-contrast imaging provides superior diagnostic information
 - Balanced performance across 663 test samples
 
+### Grad-CAM Validation
+
+With real Glioma MRI test image:
+- **Threshold 0.3**: 28,713 pixels highlighted, 2 regions detected
+- **Threshold 0.5**: 10,709 pixels highlighted, 3 regions detected  
+- **Threshold 0.7**: 3,176 pixels highlighted, 1 region detected
+- **Confidence**: 96.94% for correct class prediction
+
 ### Training Time
 
 On GitHub Codespaces (4-core CPU):
-- **Stage 1 (Feature Extraction)**: ~1.5 hours (10 epochs)
-- **Stage 2 (Fine-Tuning)**: ~0.8 hours (5 epochs)
-- **Total Training Time**: ~2.3 hours
+- **Total Training Time**: ~2-3 hours for 120 epochs (both stages)
 
 On GPU (typical setup):
 - **Total Training Time**: 20-40 minutes
 
 ### Model Size
 
-- **Final Model**: ~28 MB (models/final_model.keras)
+- **Final Model**: ~28 MB (models/best_model_finetuned.keras)
 - **MobileNetV2 Base**: ~14 MB
 - **Custom Head**: ~14 MB
 
-## 🔮 Future Work
+## �� Contributing
 
-### Planned Enhancements
+Contributions are welcome! Areas for contribution:
 
 1. **Model Improvements**
-   - Ensemble methods (combining multiple models)
-   - Attention mechanisms for interpretability
-   - Self-supervised pre-training on medical images
-   - 3D CNN for volumetric MRI analysis
+   - Additional architectures
+   - Ensemble methods
+   - Improved Grad-CAM variants (Grad-CAM++, Score-CAM)
 
-2. **Feature Additions**
-   - Grad-CAM visualizations for explainability
-   - Uncertainty quantification
-   - Multi-modal fusion (T1, T2, FLAIR sequences)
-   - Tumor segmentation capabilities
-   - Longitudinal analysis (tracking over time)
+2. **Features**
+   - Tumor segmentation
+   - Multi-modal fusion
+   - DICOM support
+   - Batch processing
 
 3. **Deployment**
    - Docker containerization
-   - REST API for integration
-   - Mobile application
-   - Cloud deployment (AWS/GCP/Azure)
-   - Edge deployment for offline use
+   - REST API
+   - Mobile optimization
 
-4. **User Experience**
-   - DICOM file support
-   - Batch processing
-   - Report generation (PDF)
-   - Integration with PACS systems
-   - Multi-language support
-
-5. **Research Extensions**
-   - Federated learning for privacy
-   - Active learning for efficient labeling
-   - Few-shot learning for rare conditions
-   - Adversarial robustness testing
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how you can help:
-
-### Areas for Contribution
-
-1. **Code Improvements**
-   - Bug fixes
-   - Performance optimizations
-   - Code refactoring
-   - Test coverage
-
-2. **Documentation**
-   - Documentation improvements
-   - Code comments
+4. **Documentation**
    - Usage examples
+   - Video tutorials
+   - API documentation
 
-3. **Features**
-   - New model architectures
-   - Additional visualizations
-   - UI enhancements
-   - Data preprocessing techniques
-
-### Contribution Guidelines
+### Contribution Process
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create a feature branch (\`git checkout -b feature/AmazingFeature\`)
+3. Commit your changes (\`git commit -m 'Add AmazingFeature'\`)
+4. Push to the branch (\`git push origin feature/AmazingFeature\`)
 5. Open a Pull Request
-
-### Code Style
-
-- Follow PEP 8 guidelines
-- Add docstrings to all functions
-- Include type hints where appropriate
-- Write unit tests for new features
 
 ## 📄 License
 
@@ -748,27 +570,20 @@ Key Points:
 - No warranty or guarantee of accuracy
 - Not a substitute for professional medical diagnosis
 - Use at your own risk
-- Intended for learning and research
 
 ## 🙏 Acknowledgments
 
-- **TensorFlow/Keras Team**: For the excellent deep learning framework
-- **Streamlit Team**: For the intuitive web app framework
-- **ImageNet**: For pre-trained model weights
-- **Kaggle**: For hosting medical imaging datasets
-- **Open Source Community**: For inspiration and resources
+- **TensorFlow/Keras Team**: Deep learning framework
+- **Streamlit Team**: Web app framework
+- **ImageNet**: Pre-trained model weights
+- **Kaggle**: Medical imaging datasets
+- **Grad-CAM Authors**: Selvaraju et al. for explainability technique
 
-## 📧 Contact
-
-For questions, suggestions, or collaboration opportunities:
+## �� Contact
 
 - GitHub: [@amanraj41](https://github.com/amanraj41)
 - Project Link: [https://github.com/amanraj41/neuropathology-dl](https://github.com/amanraj41/neuropathology-dl)
 
-## 🌟 Star History
-
-If you find this project helpful, please consider giving it a star ⭐!
-
 ---
 
-**Built with ❤️ as a practical reference implementation**
+**Built with ❤️ | Version 1.1 | © 2025**

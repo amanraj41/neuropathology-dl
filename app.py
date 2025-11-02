@@ -89,7 +89,7 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #ad1457 0%, #6a1b9a 100%);
         padding: 1.5rem;
         border-radius: 12px;
         color: white;
@@ -233,7 +233,190 @@ class NeuropathologyApp:
         except Exception as e:
             st.error(f"Failed to load model: {e}")
             return False
-    
+
+    def _compute_gradcam_overlay(self, img_array, predicted_class):
+        """
+        Generate Grad-CAM heatmap and anomaly localization overlay
+        Args:
+            img_array: Preprocessed image array (224, 224, 3) in range [0, 1]
+            predicted_class: Index of predicted class
+        Returns:
+            dict with 'overlay_rgb', 'mask_any', and 'debug_info'
+        """
+        try:
+            import tensorflow as tf
+            import cv2
+            
+            # Get settings from sidebar
+            threshold = st.session_state.get('gradcam_threshold', 0.5)
+            alpha = st.session_state.get('gradcam_alpha', 0.35)
+            
+            # Get the underlying Keras model
+            keras_model = st.session_state.model.model
+            
+            # Find the base model (MobileNetV2) inside the Sequential wrapper
+            base_model = None
+            for layer in keras_model.layers:
+                if hasattr(layer, 'layers') and len(layer.layers) > 0:
+                    # This is the nested MobileNetV2 model
+                    base_model = layer
+                    break
+            
+            if base_model is None:
+                return {
+                    'overlay_rgb': (img_array * 255).astype('uint8'),
+                    'mask_any': False,
+                    'debug_info': 'Base model not found in Sequential wrapper'
+                }
+            
+            # The last conv layer in MobileNetV2 is 'Conv_1'
+            last_conv_layer_name = 'Conv_1'
+            
+            # Verify layer exists
+            try:
+                conv_layer = base_model.get_layer(last_conv_layer_name)
+            except:
+                # Fallback: try to find any conv layer
+                for layer in reversed(base_model.layers):
+                    if 'conv' in layer.name.lower() and 'bn' not in layer.name.lower():
+                        last_conv_layer_name = layer.name
+                        break
+                conv_layer = base_model.get_layer(last_conv_layer_name)
+            
+            # Create Grad-CAM model
+            # Build a new functional model that outputs both conv layer and final prediction
+            # This ensures a proper computational graph for gradient computation
+            
+            # Get the conv layer from base_model
+            conv_layer = base_model.get_layer(last_conv_layer_name)
+            
+            # Get base model input and outputs
+            base_model_input = base_model.input
+            conv_layer_output = conv_layer.output
+            base_model_output = base_model.output
+            
+            # Apply remaining layers from keras_model (skip index 0 which is base_model)
+            x = base_model_output
+            for i, layer in enumerate(keras_model.layers):
+                if i == 0:  # Skip the base_model itself
+                    continue
+                x = layer(x)
+            
+            final_output = x
+            
+            # Create the Grad-CAM model
+            gradcam_model = tf.keras.Model(
+                inputs=base_model_input,
+                outputs=[conv_layer_output, final_output]
+            )
+            
+            # Prepare input batch
+            img_batch = np.expand_dims(img_array, axis=0).astype('float32')
+            img_tensor = tf.convert_to_tensor(img_batch)
+            
+            # Compute gradients
+            with tf.GradientTape() as tape:
+                conv_outputs, predictions = gradcam_model(img_tensor, training=False)
+                
+                # Handle predictions format
+                if isinstance(predictions, list):
+                    predictions = predictions[0]
+                
+                # Get the score for the predicted class
+                class_channel = predictions[0, predicted_class]
+            
+            # Get gradients of the predicted class with respect to conv layer output
+            grads = tape.gradient(class_channel, conv_outputs)
+            
+            # Delete the tape to free resources
+            del tape
+            
+            # Debug: Check if gradients are None
+            if grads is None:
+                return {
+                    'overlay_rgb': (img_array * 255).astype('uint8'),
+                    'mask_any': False,
+                    'debug_info': 'Gradients are None - GradientTape failed'
+                }
+            
+            # Global average pooling on gradients (importance weights for each feature map)
+            pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+            
+            # Generate heatmap by weighting conv outputs with pooled gradients
+            conv_outputs = conv_outputs[0]  # Remove batch dimension
+            heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
+            
+            # Apply ReLU to remove negative values (only positive contributions)
+            heatmap = tf.nn.relu(heatmap)
+            
+            # Normalize heatmap to [0, 1]
+            heatmap_max = tf.reduce_max(heatmap)
+            if heatmap_max > 0:
+                heatmap = heatmap / heatmap_max
+            
+            heatmap_np = heatmap.numpy()
+            
+            # Debug info
+            heatmap_min = float(np.min(heatmap_np))
+            heatmap_max_val = float(np.max(heatmap_np))
+            heatmap_mean = float(np.mean(heatmap_np))
+            
+            # Resize heatmap to match input image size (224x224)
+            heatmap_resized = cv2.resize(heatmap_np, (224, 224), interpolation=cv2.INTER_LINEAR)
+            
+            # Create binary mask based on threshold
+            mask = (heatmap_resized > threshold).astype('uint8') * 255
+            pixels_above_threshold = int(np.sum(mask > 0))
+            
+            # Find contours of suspicious regions
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # Filter out very small contours (noise)
+            min_contour_area = 50  # minimum area in pixels
+            contours_filtered = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
+            
+            # Prepare base image for overlay (ensure uint8 RGB)
+            base_img_uint8 = (img_array * 255.0).astype('uint8').copy()
+            
+            # Create colorized heatmap using JET colormap
+            heatmap_colored = cv2.applyColorMap(
+                (heatmap_resized * 255).astype('uint8'),
+                cv2.COLORMAP_JET
+            )
+            
+            # Blend original image with heatmap
+            overlay = cv2.addWeighted(base_img_uint8, 1.0 - alpha, heatmap_colored, alpha, 0)
+            
+            # Draw green contours around suspicious regions
+            if len(contours_filtered) > 0:
+                cv2.drawContours(overlay, contours_filtered, -1, (0, 255, 0), 2)
+            
+            # Convert BGR to RGB for Streamlit display
+            overlay_rgb = cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+            
+            debug_msg = (f'Layer: {last_conv_layer_name}, '
+                        f'Heatmap range: [{heatmap_min:.3f}, {heatmap_max_val:.3f}], '
+                        f'Mean: {heatmap_mean:.3f}, '
+                        f'Pixels>{threshold}: {pixels_above_threshold}, '
+                        f'Contours: {len(contours)} (filtered: {len(contours_filtered)}), '
+                        f'Threshold: {threshold:.2f}, Alpha: {alpha:.2f}')
+            
+            return {
+                'overlay_rgb': overlay_rgb,
+                'mask_any': len(contours_filtered) > 0,
+                'debug_info': debug_msg
+            }
+        
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            # Return original image if Grad-CAM fails
+            return {
+                'overlay_rgb': (img_array * 255).astype('uint8'),
+                'mask_any': False,
+                'debug_info': f'Error: {str(e)}\n{error_trace}'
+            }
+
     def run(self):
         """Run the main application."""
         # Header with inline emoji and improved title
@@ -291,19 +474,47 @@ class NeuropathologyApp:
             step=0.05,
             help="Minimum confidence for predictions"
         )
+
+        # Add Grad-CAM controls
+        st.sidebar.markdown("#### 🔍 Anomaly Localization")
+
+        st.session_state.show_gradcam = st.sidebar.checkbox(
+            "Enable", 
+            value=True,
+            help="Show suspicious regions with colored overlay and borders"
+        )
+
+        st.session_state.gradcam_threshold = st.sidebar.slider(
+            "Detection Sensitivity",
+            min_value=0.1,
+            max_value=0.9,
+            value=0.5,
+            step=0.05,
+            help="Higher values show only the most suspicious regions"
+        )
+
+        st.session_state.gradcam_alpha = st.sidebar.slider(
+            "Overlay Intensity",
+            min_value=0.1,
+            max_value=0.8,
+            value=0.35,
+            step=0.05,
+            help="Controls how prominently the heatmap appears over the MRI"
+        )
         
         # Creator information at bottom of sidebar
         st.sidebar.markdown("---")
         st.sidebar.markdown("""
-        <div style="text-align: center; padding: 1rem 0.5rem; background: linear-gradient(135deg, #667eea15, #764ba215); border-radius: 8px;">
-            <p style="color: #666; font-size: 0.75rem; margin-bottom: 0.3rem;">
-                <strong>Created by</strong>
+        <div style="text-align: center; padding: 1.5rem 1rem; background: linear-gradient(135deg, #ad1457 0%, #6a1b9a 100%); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+            <p style="color: rgba(255,255,255,0.95); font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
+                Developed by
             </p>
-            <p style="color: #667eea; font-size: 0.9rem; font-weight: 600; margin: 0;">
+            <p style="color: white; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0; text-shadow: 0 1px 3px rgba(0,0,0,0.25);">
                 Aman Raj
             </p>
-            <p style="color: #888; font-size: 0.7rem; margin-top: 0.3rem;">
-                Version 1.0 | © 2025
+            <div style="margin: 0.6rem 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);"></div>
+            <p style="color: white; font-size: 0.9rem; margin: 0.3rem 0; font-weight: 600;">
+                Version 1.1 • © 2025
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -315,7 +526,7 @@ class NeuropathologyApp:
         <h3>🎯 Project Overview</h3>
     <p style="font-size: 1.1rem; line-height: 1.6;">
     An advanced neuropathology detection system leveraging deep learning to analyze brain MRI scans across multiple imaging modalities (T1, T1C+, T2).<br>
-    Provides real-time, 17-class categorization with color-coded classes and medical context.
+    Provides real-time, 17-class categorization with Grad-CAM explainability, color-coded classes and medical context.
         </p>
         </div>
         """, unsafe_allow_html=True)
@@ -336,6 +547,7 @@ class NeuropathologyApp:
             - **17-Class Classification**: Covers gliomas, meningiomas, schwannomas, neurocytomas, lesions & normal scans
             - **Data Augmentation**: Rotation, zoom, horizontal flip for robust training
             - **Real-time Inference**: Sub-second predictions on CPU
+            - **Explainability**: Grad-CAM overlays to localize suspicious regions and improve interpretability
             - **Interactive Visualizations**: Plotly-powered confidence charts
             - **Medical Context**: Detailed MRI findings and clinical descriptions
             """)
@@ -373,9 +585,9 @@ class NeuropathologyApp:
         st.markdown("""
         <div class=\"info-box\">
         <p>
-        This system can detect <strong>17 different neuropathological conditions</strong> 
-        across multiple MRI imaging modalities (T1, T1C+, T2). Each class is color-coded 
-        throughout the interface for easy identification.
+    This system can detect <strong>17 different neuropathological conditions</strong> 
+    across multiple MRI imaging modalities (T1, T1C+, T2). Each class is color-coded 
+    throughout the interface for easy identification. The interface also provides Grad-CAM explainability overlays to help localize suspicious regions.
         </p>
         </div>
         """, unsafe_allow_html=True)
@@ -646,10 +858,48 @@ class NeuropathologyApp:
             # Display uploaded image and predicted diagnosis side by side
             col1, col2 = st.columns([1, 1])
             
+            # Determine what to show in left column (original or Grad-CAM overlay)
+            show_overlay = False
+            overlay_image = image
+            overlay_caption = "📷 Uploaded Image"
+            
+            if 'analysis_results' in st.session_state:
+                results = st.session_state.analysis_results
+                
+                # Generate Grad-CAM in real-time based on current slider settings
+                if st.session_state.get('show_gradcam', True):
+                    img_array = results.get('img_array')
+                    predicted_class = results.get('predicted_class')
+                    
+                    if img_array is not None and predicted_class is not None:
+                        gradcam_results = self._compute_gradcam_overlay(img_array, predicted_class)
+                        class_name = results['class_name']
+                        
+                        # Show overlay if regions detected and not normal tissue
+                        if gradcam_results['mask_any'] and not class_name.startswith('NORMAL'):
+                            show_overlay = True
+                            overlay_image = gradcam_results['overlay_rgb']
+                            overlay_caption = "📷 MRI with Anomaly Detection"
+                        elif class_name.startswith('NORMAL'):
+                            # For normal scans, keep original but change caption
+                            overlay_caption = "📷 MRI Scan"
+            
             with col1:
-                st.markdown("### 📷 Uploaded Image")
-                # Show image at natural size within column width (no caption)
-                st.image(image, use_column_width=True)
+                st.markdown(f"### {overlay_caption}")
+                st.image(overlay_image, use_column_width=True)
+                
+                # Show success message for normal scans or interpretation for tumors
+                if 'analysis_results' in st.session_state:
+                    results = st.session_state.analysis_results
+                    class_name = results['class_name']
+                    if class_name.startswith('NORMAL') and st.session_state.get('show_gradcam', True):
+                        st.success("✅ Normal brain tissue detected")
+                    elif show_overlay:
+                        st.info(
+                            "ℹ️ Suspicious regions highlighted\n\n"
+                            "Heatmap: The color overlay (red/yellow = high activation, blue = low) shows areas where anomalous patterns are detected. Use slider to adjust intensity.\n\n"
+                            "Contours: Green border marks the boundaries of suspected regions above the sensitivity threshold."
+                        )
             
             with col2:
                 # Add a bit more top padding before image details to improve alignment
@@ -711,13 +961,14 @@ class NeuropathologyApp:
                                 predicted_class = np.argmax(predictions[0])
                                 confidence = predictions[0][predicted_class]
                                 class_name = self.class_names[predicted_class]
-                                
-                                # Store in session state for display
+
+                                # Store analysis results (without Grad-CAM yet)
                                 st.session_state.analysis_results = {
                                     'predictions': predictions[0],
                                     'predicted_class': predicted_class,
                                     'confidence': confidence,
-                                    'class_name': class_name
+                                    'class_name': class_name,
+                                    'img_array': img_array  # Store for real-time Grad-CAM updates
                                 }
                                 st.rerun()
                                 
@@ -726,9 +977,17 @@ class NeuropathologyApp:
                 else:
                     # Display predicted diagnosis in right column
                     results = st.session_state.analysis_results
-                    class_color = CLASS_COLORS.get(results['class_name'], "#6c757d")
+                    # Replace Portuguese label for display purposes
+                    raw_class_name = results['class_name']
+                    display_class_name = raw_class_name.replace(
+                        'Outros Tipos de Lesões',
+                        'Other Lesions (Abscesses, Cysts, Encephalopathies)'
+                    )
+                    # Fix Neurocytoma spelling
+                    display_class_name = display_class_name.replace('Neurocitoma', 'Neurocytoma')
+                    class_color = CLASS_COLORS.get(raw_class_name, "#6c757d")
                     confidence = results['confidence']
-                    class_name = results['class_name']
+                    class_name = display_class_name
                     
                     # Determine confidence status
                     threshold = st.session_state.get('confidence_threshold', 0.7)
@@ -752,7 +1011,7 @@ class NeuropathologyApp:
                     <p><strong>Status:</strong> {status_text} (threshold: {threshold*100:.0f}%)</p>
                     </div>
                     """, unsafe_allow_html=True)
-                    
+                                    
                     # Button to re-analyze
                     if st.button("🔄 Re-analyze", key="reanalyze", use_container_width=True):
                         del st.session_state.analysis_results
@@ -779,16 +1038,20 @@ class NeuropathologyApp:
         class_color = CLASS_COLORS.get(class_name, "#6c757d")
         
         # Detailed results - Full width
-        st.markdown("### 📊 Detailed Analysis")
+        st.markdown("### 📊 Probability Distribution")
         
         # Create short labels for plotting (remove parentheses content)
         short_labels = []
         for name in self.class_names:
-            # Remove content in parentheses and trim
+            # Remove content in parentheses and trim, keep modality suffix (T1/T2/T1C+)
             if '(' in name:
                 short_name = name.split('(')[0].strip() + ' ' + name.split()[-1]
             else:
                 short_name = name
+            # Replace Portuguese phrase for x-axis (short form without parentheses)
+            short_name = short_name.replace('Outros Tipos de Lesões', 'Other Lesions')
+            # Fix Neurocytoma spelling
+            short_name = short_name.replace('Neurocitoma', 'Neurocytoma')
             short_labels.append(short_name)
         
         # Confidence scores for all classes - responsive visualization with hover darkening
@@ -847,7 +1110,7 @@ class NeuropathologyApp:
         
         fig.update_layout(
             title='Prediction Confidence for All Classes',
-            xaxis_title='Pathology Type',
+            xaxis_title='Pathology type with MRI sequence',
             yaxis_title='Confidence Score',
             yaxis=dict(range=[0, 1], tickformat='.0%', showspikes=False),
             xaxis=dict(tickangle=-45, showspikes=False),
@@ -886,8 +1149,23 @@ class NeuropathologyApp:
                 # Get the modality (last word after closing parenthesis)
                 if ')' in name:
                     modality = name.split(')')[-1].strip()
-                    return f"{base} {modality}" if modality else base
-            return name
+                    result = f"{base} {modality}" if modality else base
+                    # Replace Portuguese phrase with English (with parentheses detail)
+                    result = result.replace(
+                        'Outros Tipos de Lesões',
+                        'Other Lesions (Abscesses, Cysts, Encephalopathies)'
+                    )
+                    # Fix Neurocytoma spelling
+                    result = result.replace('Neurocitoma', 'Neurocytoma')
+                    return result
+            # Replace Portuguese phrase for display (with parentheses detail)
+            cleaned = name.replace(
+                'Outros Tipos de Lesões',
+                'Other Lesions (Abscesses, Cysts, Encephalopathies)'
+            )
+            # Fix Neurocytoma spelling
+            cleaned = cleaned.replace('Neurocitoma', 'Neurocytoma')
+            return cleaned
         
         # Create sorted list of (display_name, full_name, probability, color) tuples
         prob_data = [(clean_class_name(name), name, prob, CLASS_COLORS.get(name, "#6c757d")) 
@@ -1006,6 +1284,16 @@ class NeuropathologyApp:
             - Data Augmentation (rotation, flip, zoom)
             - Early Stopping (patience=10)
             """)
+            # Grad-CAM explainability section
+            with col2:
+                st.markdown("""
+                <div class="info-box">
+                <h4>🔎 Explainability — Grad-CAM</h4>
+                <p>
+                The app includes Grad-CAM visual explanations that produce heatmaps highlighting image regions that most contributed to the model's prediction. Use the sensitivity and intensity sliders in the sidebar to tune localization.
+                </p>
+                </div>
+                """, unsafe_allow_html=True)
         
         st.markdown("---")
         

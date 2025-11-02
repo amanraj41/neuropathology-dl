@@ -34,10 +34,12 @@ learn/
 *.swo
 *~
 
-# Data (exclude large datasets)
+# Data (exclude large datasets, but include src/data)
 data/
 datasets/
 !data/.gitkeep
+!src/data/
+!src/data/**/*.py
 *.nii
 *.nii.gz
 
