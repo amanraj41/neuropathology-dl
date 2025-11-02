@@ -532,7 +532,7 @@ class NeuropathologyApp:
                     )
                 with col2:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    if st.button("🚀 Load Model", use_container_width=True):
+                    if st.button("🚀 Load Model", width="stretch"):
                         with st.spinner(f"Loading {selected_model}..."):
                             if self._load_model(selected_model):
                                 st.success(f"✅ Model '{selected_model}' loaded successfully!")
@@ -591,7 +591,7 @@ class NeuropathologyApp:
 
         # Clear button if image exists
         if st.session_state.uploaded_image is not None:
-            if st.button("🗑️ Clear Image & Results", use_container_width=False):
+            if st.button("🗑️ Clear Image & Results", width="stretch"):
                 st.session_state.uploaded_image = None
                 st.session_state.image_source = None
                 if 'analysis_results' in st.session_state:
@@ -611,7 +611,7 @@ class NeuropathologyApp:
                 "Or paste an image URL (jpg/jpeg/png)",
                 placeholder="https://.../brain_mri.jpg"
             )
-            fetch_from_url = st.button("🌐 Fetch from URL", use_container_width=True)
+            fetch_from_url = st.button("🌐 Fetch from URL", width="stretch")
 
         image = None
         src_label = None
@@ -649,7 +649,7 @@ class NeuropathologyApp:
             with col1:
                 st.markdown("### 📷 Uploaded Image")
                 # Show image at natural size within column width (no caption)
-                st.image(image, use_container_width=True)
+                st.image(image, width="stretch")
             
             with col2:
                 # Add a bit more top padding before image details to improve alignment
@@ -688,7 +688,7 @@ class NeuropathologyApp:
                     st.markdown("Click below to start the analysis with the loaded model.")
                     
                     # Analyze button
-                    if st.button("🔬 Analyze Image", key="analyze", use_container_width=True):
+                    if st.button("🔬 Analyze Image", key="analyze", width="stretch"):
                         with st.spinner("Analyzing image with deep learning model..."):
                             # Preprocess image
                             try:
@@ -754,7 +754,7 @@ class NeuropathologyApp:
                     """, unsafe_allow_html=True)
                     
                     # Button to re-analyze
-                    if st.button("🔄 Re-analyze", key="reanalyze", use_container_width=True):
+                    if st.button("🔄 Re-analyze", key="reanalyze", width="stretch"):
                         del st.session_state.analysis_results
                         st.rerun()
 
@@ -856,7 +856,7 @@ class NeuropathologyApp:
             bargap=0.15
         )
         
-        st.plotly_chart(fig, use_container_width=True, key="confidence_chart")
+        st.plotly_chart(fig, width="stretch", key="confidence_chart")
         
         
         # Class description and characteristic MRI findings
