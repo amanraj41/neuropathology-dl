@@ -1,21 +1,24 @@
+# Streamlit Cloud-friendly pinned deps (CPU-only)
+
 # Core Deep Learning and ML Libraries
-tensorflow>=2.16.0,<2.21.0
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.3.0
-pillow>=10.0.0
+tensorflow-cpu==2.17.1
+keras==3.4.1
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.2
+pillow==10.4.0
 
 # Web Application
-streamlit>=1.29.0
-streamlit-option-menu>=0.3.0
+streamlit==1.39.0
+streamlit-option-menu==0.3.12
 
 # Visualization
-matplotlib>=3.7.0
-seaborn>=0.13.0
-plotly>=5.18.0
+matplotlib==3.8.4
+seaborn==0.13.2
+plotly==5.24.1
 
-# Image Processing
-opencv-python>=4.8.1.78
+# Image Processing (headless for servers)
+opencv-python-headless==4.10.0.84
 
 # Model Utilities
-h5py>=3.10.0
+h5py==3.11.0

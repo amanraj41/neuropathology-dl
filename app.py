@@ -12,7 +12,19 @@ import plotly.graph_objects as go
 from urllib.request import urlopen, Request
 from io import BytesIO
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# Ensure local 'src' package is importable in various runtimes (local, Streamlit Cloud)
+try:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(base_dir, 'src'),
+        os.path.join(os.path.dirname(base_dir), 'src'),
+    ]
+    for p in candidates:
+        if os.path.isdir(p) and p not in sys.path:
+            sys.path.insert(0, p)
+except Exception:
+    # Safe fallback (won't break if __file__ not set)
+    pass
 
 from src.models.neuropathology_model import NeuropathologyModel
 from src.data.data_loader import MRIDataLoader
