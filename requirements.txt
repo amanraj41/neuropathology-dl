@@ -1,8 +1,7 @@
 # Streamlit Cloud-friendly pinned deps (CPU-only)
 
 # Core Deep Learning and ML Libraries
-tensorflow-cpu==2.17.1
-keras==3.4.1
+tensorflow==2.20.0
 numpy==1.26.4
 pandas==2.2.2
 scikit-learn==1.5.2
