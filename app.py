@@ -649,7 +649,7 @@ class NeuropathologyApp:
             with col1:
                 st.markdown("### 📷 Uploaded Image")
                 # Show image at natural size within column width (no caption)
-                st.image(image, width="stretch")
+                st.image(image, use_column_width=True)
             
             with col2:
                 # Add a bit more top padding before image details to improve alignment
